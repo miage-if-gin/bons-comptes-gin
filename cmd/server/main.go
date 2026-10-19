@@ -32,6 +32,11 @@ func main() {
 	}
 	defer db.Close(gdb)
 
+	if err := db.Migrate(gdb); err != nil {
+		slog.Error("migrations en échec", "error", err)
+		os.Exit(1)
+	}
+
 	if cfg.IsProduction() {
 		gin.SetMode(gin.ReleaseMode)
 	}
