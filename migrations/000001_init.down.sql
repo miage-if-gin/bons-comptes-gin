@@ -1,0 +1,6 @@
+DROP TABLE IF EXISTS sessions;
+DROP TABLE IF EXISTS settlements;
+DROP TABLE IF EXISTS expenses;
+DROP TABLE IF EXISTS wallet_members;
+DROP TABLE IF EXISTS wallets;
+DROP TABLE IF EXISTS accounts;
