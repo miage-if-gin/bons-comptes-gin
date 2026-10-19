@@ -25,16 +25,13 @@ Encadrants : Romain Rouvoy, Gaëtan Hasbroucq
 ### Installer Go
 
 **macOS**
-```bash
-brew install go
-```
+
+    brew install go
+
 ou l'installeur `.pkg` depuis https://go.dev/dl (choisir arm64 pour les Mac Apple Silicon).
 
-**Linux** — télécharger l'archive sur https://go.dev/dl puis :
-```bash
-sudo rm -rf /usr/local/go && sudo tar -C /usr/local -xzf go1.XX.X.linux-amd64.tar.gz
-echo 'export PATH=$PATH:/usr/local/go/bin' >> ~/.bashrc && source ~/.bashrc
-```
+**Linux** — télécharger l'archive sur https://go.dev/dl puis la décompresser dans
+`/usr/local` et ajouter `/usr/local/go/bin` au `PATH`.
 
 **Windows** — installeur `.msi` depuis https://go.dev/dl, puis rouvrir le terminal.
 
@@ -42,23 +39,16 @@ echo 'export PATH=$PATH:/usr/local/go/bin' >> ~/.bashrc && source ~/.bashrc
 
 ### 1. Cloner et installer les dépendances
 
-```bash
-git clone git@github.com:miage-if-gin/bons-comptes-gin.git
-cd bons-comptes-gin
-go mod download
-```
+    git clone git@github.com:miage-if-gin/bons-comptes-gin.git
+    cd bons-comptes-gin
+    go mod download
 
 ### 2. Configurer l'environnement
 
-```bash
-cp .env.example .env
-```
+    cp .env.example .env
 
-Puis générer un secret de session et le reporter dans `.env` :
-
-```bash
-openssl rand -hex 32
-```
+Puis générer un secret de session avec `openssl rand -hex 32` et le reporter
+dans `.env`.
 
 > `.env` est ignoré par Git. Chacun génère son propre `SESSION_SECRET` en
 > local ; aucun secret ne doit être commité ni partagé dans le dépôt.
@@ -74,10 +64,8 @@ openssl rand -hex 32
 
 Docker Desktop doit être démarré.
 
-```bash
-docker compose up -d
-docker compose ps        # postgres doit être "healthy"
-```
+    make up              # démarre PostgreSQL et Adminer
+    docker compose ps    # postgres doit être "healthy"
 
 | Service | URL | Identifiants |
 |---|---|---|
@@ -86,21 +74,26 @@ docker compose ps        # postgres doit être "healthy"
 
 ### 4. Lancer le serveur
 
-```bash
-go run ./cmd/server
-curl localhost:8080/healthz    # {"status":"ok"}
-```
+Les migrations s'appliquent automatiquement au démarrage.
 
-### Arrêter
+    make run
+    curl localhost:8080/readyz    # {"db":"ok","status":"ok"}
 
-```bash
-docker compose down      # arrête, conserve les données
-docker compose down -v   # arrête et détruit les données
-```
+### Commandes utiles
+
+    make help        # liste toutes les commandes
+    make psql        # shell SQL sur la base locale
+    make test        # tests avec détection de data races
+    make down        # arrête les conteneurs
+    make reset       # détruit la base et ses données
 
 ## Structure du projet
 
-*...*
+    cmd/server/        point d'entrée de l'application
+    internal/
+      config/          chargement de la configuration
+      db/              connexion PostgreSQL et migrations
+    migrations/        schéma SQL versionné (embarqué dans le binaire)
 
 ## Contribuer
 
