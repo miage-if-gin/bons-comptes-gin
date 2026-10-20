@@ -60,6 +60,12 @@ func (r *Renderer) Render(c *gin.Context, status int, page string, data gin.H) {
 		data["Title"] = ""
 	}
 
+	if _, ok := data["CurrentAccount"]; !ok {
+		if v, exists := c.Get("compteCourant"); exists {
+			data["CurrentAccount"] = v
+		}
+	}
+
 	c.Status(status)
 	c.Header("Content-Type", "text/html; charset=utf-8")
 

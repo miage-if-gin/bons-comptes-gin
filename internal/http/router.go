@@ -19,16 +19,24 @@ type Deps struct {
 	DB       *gorm.DB
 	Renderer *web.Renderer
 	Accounts *service.AccountService
+	Auth     *service.AuthService
 }
 
 func NewRouter(d Deps) *gin.Engine {
 	r := gin.Default()
+
+	r.Use(chargerCompte(d))
 
 	r.Static("/static", "web/static")
 
 	registerHealth(r, d)
 	registerPages(r, d)
 	registerAuth(r, d)
+	registerLogin(r, d)
+
+	// Routes nécessitant une connexion. Les lots suivants s'y greffent.
+	prive := r.Group("/", exigerCompte())
+	_ = prive
 
 	return r
 }

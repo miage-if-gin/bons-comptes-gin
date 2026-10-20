@@ -42,3 +42,16 @@ func (r *AccountRepository) FindByEmail(ctx context.Context, email string) (*dom
 	}
 	return &a, nil
 }
+
+func (r *AccountRepository) FindByID(ctx context.Context, id int64) (*domain.Account, error) {
+	var a domain.Account
+	err := r.db.WithContext(ctx).First(&a, id).Error
+
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &a, nil
+}

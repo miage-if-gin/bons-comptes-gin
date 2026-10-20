@@ -17,7 +17,9 @@
             {{ if .CurrentAccount }}
             <span class="text-slate-500">{{ .CurrentAccount.DisplayName }}</span>
             <a href="/wallets" class="hover:underline">Mes porte-monnaies</a>
-            <a href="/logout" class="hover:underline">Déconnexion</a>
+            <form method="post" action="/logout" class="inline">
+                <button type="submit" class="hover:underline">Déconnexion</button>
+            </form>
             {{ else }}
             <a href="/login" class="hover:underline">Connexion</a>
             <a href="/register"

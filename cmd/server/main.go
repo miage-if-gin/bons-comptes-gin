@@ -52,13 +52,17 @@ func main() {
 	}
 
 	accountRepo := repository.NewAccountRepository(gdb)
+	sessionRepo := repository.NewSessionRepository(gdb)
+
 	accountSvc := service.NewAccountService(accountRepo)
+	authSvc := service.NewAuthService(accountRepo, sessionRepo)
 
 	r := apphttp.NewRouter(apphttp.Deps{
 		Cfg:      cfg,
 		DB:       gdb,
 		Renderer: renderer,
 		Accounts: accountSvc,
+		Auth:     authSvc,
 	})
 
 	srv := &http.Server{
