@@ -15,6 +15,8 @@ import (
 	"github.com/miage-if-gin/bons-comptes-gin/internal/config"
 	"github.com/miage-if-gin/bons-comptes-gin/internal/db"
 	apphttp "github.com/miage-if-gin/bons-comptes-gin/internal/http"
+	"github.com/miage-if-gin/bons-comptes-gin/internal/repository"
+	"github.com/miage-if-gin/bons-comptes-gin/internal/service"
 	"github.com/miage-if-gin/bons-comptes-gin/internal/web"
 )
 
@@ -49,10 +51,14 @@ func main() {
 		gin.SetMode(gin.ReleaseMode)
 	}
 
+	accountRepo := repository.NewAccountRepository(gdb)
+	accountSvc := service.NewAccountService(accountRepo)
+
 	r := apphttp.NewRouter(apphttp.Deps{
 		Cfg:      cfg,
 		DB:       gdb,
 		Renderer: renderer,
+		Accounts: accountSvc,
 	})
 
 	srv := &http.Server{

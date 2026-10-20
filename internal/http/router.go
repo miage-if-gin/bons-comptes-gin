@@ -10,6 +10,7 @@ import (
 
 	"github.com/miage-if-gin/bons-comptes-gin/internal/config"
 	"github.com/miage-if-gin/bons-comptes-gin/internal/db"
+	"github.com/miage-if-gin/bons-comptes-gin/internal/service"
 	"github.com/miage-if-gin/bons-comptes-gin/internal/web"
 )
 
@@ -17,6 +18,7 @@ type Deps struct {
 	Cfg      config.Config
 	DB       *gorm.DB
 	Renderer *web.Renderer
+	Accounts *service.AccountService
 }
 
 func NewRouter(d Deps) *gin.Engine {
@@ -26,6 +28,7 @@ func NewRouter(d Deps) *gin.Engine {
 
 	registerHealth(r, d)
 	registerPages(r, d)
+	registerAuth(r, d)
 
 	return r
 }
