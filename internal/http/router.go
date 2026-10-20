@@ -34,9 +34,9 @@ func NewRouter(d Deps) *gin.Engine {
 	registerAuth(r, d)
 	registerLogin(r, d)
 
-	// Routes nécessitant une connexion. Les lots suivants s'y greffent.
 	prive := r.Group("/", exigerCompte())
-	_ = prive
+
+	registerWallets(prive, d)
 
 	return r
 }
