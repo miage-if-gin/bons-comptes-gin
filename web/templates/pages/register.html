@@ -1,0 +1,39 @@
+{{ define "content" }}
+<div class="mx-auto max-w-md rounded-lg border border-slate-200 bg-white p-8">
+    <h1 class="text-xl font-semibold">Créer un compte</h1>
+
+    {{ if .Erreur }}
+    <p class="mt-4 rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+        {{ .Erreur }}
+    </p>
+    {{ end }}
+
+    <form method="post" action="/register" class="mt-6 space-y-4">
+        <div>
+            <label for="display_name" class="block text-sm font-medium">Nom</label>
+            <input type="text" id="display_name" name="display_name" required
+                   value="{{ .DisplayName }}"
+                   class="mt-1 w-full rounded border border-slate-300 px-3 py-2">
+        </div>
+
+        <div>
+            <label for="email" class="block text-sm font-medium">Email</label>
+            <input type="email" id="email" name="email" required
+                   value="{{ .Email }}"
+                   class="mt-1 w-full rounded border border-slate-300 px-3 py-2">
+        </div>
+
+        <div>
+            <label for="password" class="block text-sm font-medium">Mot de passe</label>
+            <input type="password" id="password" name="password" required minlength="8"
+                   class="mt-1 w-full rounded border border-slate-300 px-3 py-2">
+            <p class="mt-1 text-xs text-slate-500">8 caractères minimum.</p>
+        </div>
+
+        <button type="submit"
+                class="w-full rounded bg-slate-900 px-4 py-2 text-white hover:bg-slate-700">
+            Créer mon compte
+        </button>
+    </form>
+</div>
+{{ end }}

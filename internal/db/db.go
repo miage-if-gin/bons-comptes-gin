@@ -24,7 +24,8 @@ func Open(dsn string, verbose bool) (*gorm.DB, error) {
 	}
 
 	gdb, err := gorm.Open(postgres.Open(dsn), &gorm.Config{
-		Logger: logger.Default.LogMode(level),
+		Logger:         logger.Default.LogMode(level),
+		TranslateError: true,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("ouverture de la base : %w", err)
