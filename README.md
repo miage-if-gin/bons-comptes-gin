@@ -149,9 +149,13 @@ Générer le secret avec PowerShell plutôt qu'`openssl` :
     internal/
       config/          chargement de la configuration depuis l'environnement
       db/              connexion PostgreSQL et application des migrations
+      domain/          structures métier
+      repository/      accès aux données
+      service/         règles métier
       http/            routeur et handlers
       web/             chargement et rendu des templates
     migrations/        schéma SQL versionné (embarqué dans le binaire)
+    docs/              décisions d'architecture et notes
     web/
       templates/       layouts et pages HTML
       static/          fichiers statiques
@@ -169,6 +173,9 @@ Générer le secret avec PowerShell plutôt qu'`openssl` :
 
 Les montants sont stockés en **centimes** (`BIGINT`) : jamais de flottant pour
 représenter de l'argent.
+
+Le détail de chaque décision, avec les options écartées et leurs conséquences,
+est dans [docs/adr.md](docs/adr.md).
 
 ## Supervision
 
