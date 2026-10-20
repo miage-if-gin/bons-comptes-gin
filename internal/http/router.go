@@ -34,11 +34,11 @@ func NewRouter(d Deps) *gin.Engine {
 	registerAuth(r, d)
 	registerLogin(r, d)
 
-    prive := r.Group("/", exigerCompte())
+	prive := r.Group("/", exigerCompte())
 
-    registerWallets(prive, d)
+	registerWallets(prive, d)
 
-    return r
+	return r
 }
 
 func registerPages(r *gin.Engine, d Deps) {

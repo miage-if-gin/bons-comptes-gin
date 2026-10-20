@@ -13,11 +13,11 @@ import (
 
 func registerWallets(private *gin.RouterGroup, d Deps) {
 
-    private.GET("/wallets/new", func(c *gin.Context) {
-        d.Renderer.Render(c, http.StatusOK, "wallets_new.html", gin.H{
-            "Title": "Nouveau Porte-monnaie",
-        })
-    })
+	private.GET("/wallets/new", func(c *gin.Context) {
+		d.Renderer.Render(c, http.StatusOK, "wallets_new.html", gin.H{
+			"Title": "Nouveau Porte-monnaie",
+		})
+	})
 
 	private.POST("/wallets", func(c *gin.Context) {
 		walletName := c.PostForm("name")
@@ -26,7 +26,7 @@ func registerWallets(private *gin.RouterGroup, d Deps) {
 			return
 		}
 
-        currentAccount := CompteCourant(c)
+		currentAccount := CompteCourant(c)
 		if currentAccount == nil {
 			c.String(http.StatusUnauthorized, "Non autorisé")
 			return
