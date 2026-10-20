@@ -158,4 +158,99 @@ func registerWallets(private *gin.RouterGroup, d Deps) {
 
 		c.Redirect(http.StatusSeeOther, fmt.Sprintf("/wallets/%d", walletID))
 	})
+
+	type DashboardRow struct {
+		ID            int64
+		Name          string
+		WalletStatus  string
+		MemberStatus  string
+		MemberCount   int
+		TotalExpenses float64
+	}
+
+	private.GET("/wallets", func(c *gin.Context) {
+		currentAccount := CompteCourant(c)
+
+		var rows []DashboardRow
+
+		err := d.DB.Table("wallets w").
+			Select(`
+        				w.id,
+        				w.name,
+        				w.status as wallet_status,
+        				wm.status as member_status,
+        				(SELECT COUNT(account_id) FROM wallet_members WHERE wallet_id = w.id AND status = 'accepted') as member_count,
+        				0 as total_expenses
+        			`).
+			Joins("JOIN wallet_members wm ON wm.wallet_id = w.id").
+			Where("wm.account_id = ?", currentAccount.ID).
+			Where("wm.status IN (?, ?)", "pending", "accepted").
+			Scan(&rows).Error
+
+		if err != nil {
+			c.String(http.StatusInternalServerError, "Erreur lors de la récupération des données")
+			return
+		}
+
+		var pending, open, closed []DashboardRow
+		for _, r := range rows {
+			if r.MemberStatus == "pending" {
+				pending = append(pending, r)
+			} else if r.WalletStatus == "open" {
+				open = append(open, r)
+			} else if r.WalletStatus == "closed" {
+				closed = append(closed, r)
+			}
+		}
+
+		d.Renderer.Render(c, http.StatusOK, "wallets_index.html", gin.H{
+			"Title":   "Mes porte-monnaies",
+			"Pending": pending,
+			"Open":    open,
+			"Closed":  closed,
+		})
+	})
+
+	private.POST("/wallets/:id/respond", func(c *gin.Context) {
+		walletID, err := strconv.ParseInt(c.Param("id"), 10, 64)
+		if err != nil {
+			c.String(http.StatusBadRequest, "ID invalide")
+			return
+		}
+
+		action := c.PostForm("action")
+		if action != "accept" && action != "decline" {
+			c.String(http.StatusBadRequest, "Action non reconnue")
+			return
+		}
+
+		currentAccount := CompteCourant(c)
+
+		var member domain.WalletMember
+		if err := d.DB.Where("wallet_id = ? AND account_id = ?", walletID, currentAccount.ID).First(&member).Error; err != nil {
+			c.String(http.StatusForbidden, "Invitation introuvable ou vous n'y avez pas accès")
+			return
+		}
+
+		if member.Status != "pending" {
+			c.String(http.StatusBadRequest, "Cette invitation a déjà été traitée")
+			return
+		}
+
+		newStatus := "accepted"
+		if action == "decline" {
+			newStatus = "declined"
+		}
+
+		now := time.Now()
+		member.Status = newStatus
+		member.RespondedAt = &now
+
+		if err := d.DB.Save(&member).Error; err != nil {
+			c.String(http.StatusInternalServerError, "Erreur lors de l'enregistrement de la réponse")
+			return
+		}
+
+		c.Redirect(http.StatusSeeOther, "/wallets")
+	})
 }
