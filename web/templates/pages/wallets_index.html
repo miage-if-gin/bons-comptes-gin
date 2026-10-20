@@ -1,0 +1,57 @@
+{{ define "content" }}
+<div class="mx-auto max-w-4xl">
+    <h1 class="text-2xl font-semibold text-slate-900 mb-8">Mes porte-monnaies</h1>
+
+    {{ if .Pending }}
+    <div class="mb-10">
+        <h2 class="text-lg font-medium text-slate-900 mb-4">Invitations en attente</h2>
+        <div class="grid gap-4">
+            {{ range .Pending }}
+            <div class="flex items-center justify-between p-4 bg-yellow-50 border border-yellow-200 rounded-lg shadow-sm">
+                <div>
+                    <h3 class="font-medium text-slate-900">{{ .Name }}</h3>
+                    <p class="text-sm text-yellow-800">Vous avez été invité à participer à ce porte-monnaie.</p>
+                </div>
+                <form action="/wallets/{{ .ID }}/respond" method="POST" class="flex gap-2">
+                    <button type="submit" name="action" value="accept"
+                            class="px-4 py-2 bg-slate-900 text-white text-sm font-medium rounded hover:bg-slate-700 transition-colors">
+                        Accepter
+                    </button>
+                    <button type="submit" name="action" value="decline"
+                            class="px-4 py-2 bg-white text-slate-700 text-sm font-medium border border-slate-300 rounded hover:bg-slate-50 transition-colors">
+                        Refuser
+                    </button>
+                </form>
+            </div>
+            {{ end }}
+        </div>
+    </div>
+    {{ end }}
+
+    <div>
+        <div class="flex items-center justify-between mb-4">
+            <h2 class="text-lg font-medium text-slate-900">Mes participations</h2>
+            <a href="/wallets/new" class="px-4 py-2 bg-slate-900 text-white text-sm font-medium rounded hover:bg-slate-700">+ Nouveau</a>
+        </div>
+
+        <div class="grid gap-4 md:grid-cols-2">
+            {{ if .Accepted }}
+            {{ range .Accepted }}
+            <a href="/wallets/{{ .ID }}" class="block p-5 bg-white border border-slate-200 rounded-lg shadow-sm hover:border-slate-400 hover:shadow-md transition-all">
+                <h3 class="font-medium text-slate-900">{{ .Name }}</h3>
+                <div class="mt-2 flex items-center">
+                        <span class="inline-flex items-center rounded-full bg-green-50 px-2 py-1 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20">
+                            Actif
+                        </span>
+                </div>
+            </a>
+            {{ end }}
+            {{ else }}
+            <div class="col-span-2 text-sm text-slate-500 bg-slate-50 p-6 rounded-lg border border-slate-200 text-center">
+                Vous ne participez à aucun porte-monnaie pour le moment.
+            </div>
+            {{ end }}
+        </div>
+    </div>
+</div>
+{{ end }}

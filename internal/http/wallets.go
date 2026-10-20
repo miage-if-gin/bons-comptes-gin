@@ -158,4 +158,67 @@ func registerWallets(private *gin.RouterGroup, d Deps) {
 
 		c.Redirect(http.StatusSeeOther, fmt.Sprintf("/wallets/%d", walletID))
 	})
+
+	private.GET("/wallets", func(c *gin.Context) {
+		currentAccount := CompteCourant(c)
+
+		var pendingWallets []domain.Wallet
+		d.DB.Joins("JOIN wallet_members ON wallet_members.wallet_id = wallets.id").
+			Where("wallet_members.account_id = ? AND wallet_members.status = ?", currentAccount.ID, "pending").
+			Find(&pendingWallets)
+
+		var acceptedWallets []domain.Wallet
+		d.DB.Joins("JOIN wallet_members ON wallet_members.wallet_id = wallets.id").
+			Where("wallet_members.account_id = ? AND wallet_members.status = ?", currentAccount.ID, "accepted").
+			Find(&acceptedWallets)
+
+		d.Renderer.Render(c, http.StatusOK, "wallets_index.html", gin.H{
+			"Title":    "Mes porte-monnaies",
+			"Pending":  pendingWallets,
+			"Accepted": acceptedWallets,
+		})
+	})
+
+	private.POST("/wallets/:id/respond", func(c *gin.Context) {
+		walletID, err := strconv.ParseInt(c.Param("id"), 10, 64)
+		if err != nil {
+			c.String(http.StatusBadRequest, "ID invalide")
+			return
+		}
+
+		action := c.PostForm("action")
+		if action != "accept" && action != "decline" {
+			c.String(http.StatusBadRequest, "Action non reconnue")
+			return
+		}
+
+		currentAccount := CompteCourant(c)
+
+		var member domain.WalletMember
+		if err := d.DB.Where("wallet_id = ? AND account_id = ?", walletID, currentAccount.ID).First(&member).Error; err != nil {
+			c.String(http.StatusForbidden, "Invitation introuvable ou vous n'y avez pas accès")
+			return
+		}
+
+		if member.Status != "pending" {
+			c.String(http.StatusBadRequest, "Cette invitation a déjà été traitée")
+			return
+		}
+
+		newStatus := "accepted"
+		if action == "decline" {
+			newStatus = "declined"
+		}
+
+		now := time.Now()
+		member.Status = newStatus
+		member.RespondedAt = &now
+
+		if err := d.DB.Save(&member).Error; err != nil {
+			c.String(http.StatusInternalServerError, "Erreur lors de l'enregistrement de la réponse")
+			return
+		}
+
+		c.Redirect(http.StatusSeeOther, "/wallets")
+	})
 }
