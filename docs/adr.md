@@ -176,3 +176,69 @@ parallèle inventent chacune sa propre organisation.
 des dépendances est manuel dans `main.go` : contrairement à Spring ou NestJS,
 rien ne vérifie qu'une dépendance est fournie, et un champ oublié compile puis
 plante à l'exécution.
+
+---
+
+## ADR-009 — Base partagée sur une VM OpenStack du FIL
+
+**Contexte.** Le sujet impose un backend partagé entre les étudiants du groupe,
+et suggère « une connexion à une instance de base de données partagée entre
+plusieurs machines ». Cette base doit aussi être joignable depuis la salle de
+TP le jour de notre atelier.
+
+**Blocage rencontré.** Le réseau eduroam filtre les ports sortants. Tests
+`nc -zv` depuis le campus :
+
+| Hôte              | Port | Résultat |
+|-------------------|------|----------|
+| google.com        | 443  | ouvert   |
+| github.com        | 22   | ouvert   |
+| Neon (pooler)     | 5432 | bloqué   |
+| Supabase (pooler) | 6543 | bloqué   |
+
+Les mêmes hôtes répondent en partage de connexion mobile : le blocage vient du
+réseau, pas des hébergeurs. Or aucun hébergeur PostgreSQL managé (Neon,
+Supabase, Aiven) ne permet de choisir son port d'écoute, celui-ci faisant
+partie de leur architecture mutualisée. Une base managée est donc inaccessible
+depuis la salle.
+
+**Options.**
+
+| Option                                  | Verdict                                                                    |
+|-----------------------------------------|----------------------------------------------------------------------------|
+| PostgreSQL auto-hébergé sur le port 443 | fonctionnel, mais nécessite un serveur payant ou une carte bancaire        |
+| Tunnel SSH monté par le code Go         | fonctionnel, mais met de la plomberie réseau dans l'application            |
+| Proxy WebSocket vers Neon               | non documenté pour Go, non supporté                                        |
+| GitHub Codespaces                       | supprime le problème, mais déplace tout l'environnement dans le navigateur |
+| VM sur l'OpenStack du FIL               | retenue                                                                    |
+
+**Décision.** Une machine virtuelle Ubuntu 24.04 sur `cloud.univ-lille.fr`,
+hébergeant PostgreSQL 17 dans un conteneur Docker.
+
+**Pourquoi.** La VM est sur le réseau `172.28.0.0/16` de l'université : le
+trafic entre les postes de TP et la base ne sort jamais du réseau
+universitaire, donc le filtrage d'eduroam ne s'applique pas. Vérifié :
+`nc -zv <vm> 5432` répond depuis eduroam.
+
+L'architecture reste classique — une `DATABASE_URL` standard, rien à installer
+ni à configurer côté participant, ce qui répond à la consigne « les autres
+participants sont ignorants ». Gratuit, hébergé par l'université, donc sans
+question de transfert de données hors UE.
+
+**Conséquences.** La base n'est pas joignable hors campus sans le VPN du FIL.
+Nous administrons nous-mêmes le serveur : configuration, pare-feu, sauvegardes,
+supervision — ce qui alimente directement la partie « configuration et
+déploiement en production » attendue dans l'atelier. La même VM servira à
+déployer l'application.
+
+Le changement d'hébergeur n'aurait coûté qu'une variable d'environnement : le
+code ne connaît pas son fournisseur de base. C'est le bénéfice concret du
+principe III des Twelve-Factor Apps.
+
+**À faire avant l'atelier.** Activer TLS côté PostgreSQL : le trafic passe
+actuellement en clair sur le réseau universitaire, mots de passe compris.
+
+**Détail de mise en œuvre.** Le mot de passe de la base est généré avec
+`openssl rand -hex 24` et non `-base64` : les caractères `/`, `@`, `:` et `?`
+ont une signification dans une URL de connexion et la coupent silencieusement.
+Erreur rencontrée et à signaler aux participants.
