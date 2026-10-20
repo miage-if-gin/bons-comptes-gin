@@ -14,6 +14,7 @@ import (
 
 	"github.com/miage-if-gin/bons-comptes-gin/internal/config"
 	"github.com/miage-if-gin/bons-comptes-gin/internal/db"
+	"github.com/miage-if-gin/bons-comptes-gin/internal/web"
 )
 
 func main() {
@@ -42,6 +43,20 @@ func main() {
 	}
 
 	r := gin.Default()
+
+	renderer, err := web.NewRenderer("web/templates")
+	if err != nil {
+		slog.Error("chargement des templates", "error", err)
+		os.Exit(1)
+	}
+
+	r.Static("/static", "web/static")
+
+	r.GET("/", func(c *gin.Context) {
+		renderer.Render(c, http.StatusOK, "home.html", gin.H{
+			"Title": "Accueil",
+		})
+	})
 
 	// Sonde de vivacité : le processus répond-il ?
 	r.GET("/healthz", func(c *gin.Context) {
