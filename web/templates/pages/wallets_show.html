@@ -1,0 +1,36 @@
+{{ define "content" }}
+<div class="mx-auto max-w-4xl">
+    <div class="flex items-center justify-between border-b border-slate-200 pb-4">
+        <h1 class="text-2xl font-semibold text-slate-900">{{ .Wallet.Name }}</h1>
+        <span class="inline-flex items-center rounded-md bg-green-50 px-2 py-1 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20">
+            {{ if eq .Wallet.Status "open" }}Ouvert{{ else }}Clos{{ end }}
+        </span>
+    </div>
+
+    {{ if and (eq .Wallet.Status "open") (eq .Member.Status "accepted") }}
+    <div class="mt-8 rounded-lg border border-slate-200 bg-slate-50 p-6">
+        <h3 class="text-lg font-medium text-slate-900">Inviter un participant</h3>
+        <p class="mt-1 text-sm text-slate-500">
+            La personne doit déjà posséder un compte sur Les bons comptes.
+        </p>
+
+        <form action="/wallets/{{ .Wallet.ID }}/invites" method="POST" class="mt-4 flex gap-3">
+            <div class="flex-grow">
+                <label for="email" class="sr-only">Adresse email</label>
+                <input type="email" id="email" name="email" required
+                       class="w-full rounded-md border border-slate-300 px-3 py-2 text-slate-900 focus:border-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-900"
+                       placeholder="jean.dupont@email.com">
+            </div>
+            <button type="submit"
+                    class="whitespace-nowrap rounded bg-slate-900 px-4 py-2 text-white hover:bg-slate-700">
+                Envoyer l'invitation
+            </button>
+        </form>
+    </div>
+    {{ end }}
+
+    <div class="mt-6 text-sm text-slate-500">
+        <a href="/wallets" class="hover:underline">&larr; Retour à mes porte-monnaies</a>
+    </div>
+</div>
+{{ end }}

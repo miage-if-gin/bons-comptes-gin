@@ -1,8 +1,10 @@
 package http
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -65,5 +67,95 @@ func registerWallets(private *gin.RouterGroup, d Deps) {
 		}
 
 		c.Redirect(http.StatusFound, fmt.Sprintf("/wallets/%d", newWalletID))
+	})
+
+	private.GET("/wallets/:id", func(c *gin.Context) {
+		walletID, err := strconv.ParseInt(c.Param("id"), 10, 64)
+		if err != nil {
+			c.String(http.StatusBadRequest, "ID invalide")
+			return
+		}
+
+		currentAccount := CompteCourant(c)
+
+		var wallet domain.Wallet
+		if err := d.DB.First(&wallet, walletID).Error; err != nil {
+			c.String(http.StatusNotFound, "Porte-monnaie introuvable")
+			return
+		}
+
+		var member domain.WalletMember
+		if err := d.DB.Where("wallet_id = ? AND account_id = ?", walletID, currentAccount.ID).First(&member).Error; err != nil {
+			c.String(http.StatusForbidden, "Vous n'avez pas accès à ce porte-monnaie")
+			return
+		}
+
+		d.Renderer.Render(c, http.StatusOK, "wallets_show.html", gin.H{
+			"Title":  wallet.Name,
+			"Wallet": wallet,
+			"Member": member,
+		})
+	})
+
+	private.POST("/wallets/:id/invites", func(c *gin.Context) {
+		walletID, err := strconv.ParseInt(c.Param("id"), 10, 64)
+		if err != nil {
+			c.String(http.StatusBadRequest, "ID de porte-monnaie invalide")
+			return
+		}
+
+		email := c.PostForm("email")
+		if email == "" {
+			c.String(http.StatusBadRequest, "L'email est requis")
+			return
+		}
+
+		currentAccount := CompteCourant(c)
+
+		var wallet domain.Wallet
+		if err := d.DB.First(&wallet, walletID).Error; err != nil {
+			c.String(http.StatusNotFound, "Porte-monnaie introuvable")
+			return
+		}
+		if wallet.Status == "closed" {
+			c.String(http.StatusForbidden, "Impossible d'inviter : ce porte-monnaie est clos")
+			return
+		}
+
+		var currentMember domain.WalletMember
+		if err := d.DB.Where("wallet_id = ? AND account_id = ?", walletID, currentAccount.ID).First(&currentMember).Error; err != nil {
+			c.String(http.StatusForbidden, "Vous ne faites pas partie de ce porte-monnaie")
+			return
+		}
+		if currentMember.Status != "accepted" {
+			c.String(http.StatusForbidden, "Seuls les membres acceptés peuvent envoyer des invitations")
+			return
+		}
+
+		var invitee domain.Account
+		if err := d.DB.Where("email = ?", email).First(&invitee).Error; err != nil {
+			c.String(http.StatusNotFound, "Aucun compte existant ne correspond à cet email")
+			return
+		}
+
+		now := time.Now()
+		newMember := domain.WalletMember{
+			WalletID:  walletID,
+			AccountID: invitee.ID,
+			Status:    "pending",
+			InvitedBy: &currentAccount.ID,
+			InvitedAt: now,
+		}
+
+		if err := d.DB.Create(&newMember).Error; err != nil {
+			if errors.Is(err, gorm.ErrDuplicatedKey) {
+				c.String(http.StatusConflict, "Cet utilisateur est déjà membre ou a déjà été invité")
+				return
+			}
+			c.String(http.StatusInternalServerError, "Erreur technique lors de l'invitation")
+			return
+		}
+
+		c.Redirect(http.StatusSeeOther, fmt.Sprintf("/wallets/%d", walletID))
 	})
 }
