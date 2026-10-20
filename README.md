@@ -102,6 +102,17 @@ Docker Desktop doit être démarré.
 | PostgreSQL | `localhost:5432`      | `bonscomptes` / `bonscomptes`          |
 | Adminer    | http://localhost:8081 | serveur `postgres`, base `bonscomptes` |
 
+### Base partagée
+
+Pour travailler sur les données communes du groupe, remplacer `DATABASE_URL`
+par celle de l'instance hébergée sur l'OpenStack du FIL. L'URL est transmise en
+privé, jamais versionnée.
+
+Accessible depuis le campus uniquement, ou via le VPN du FIL depuis
+l'extérieur. Les migrations s'appliquent automatiquement au démarrage : la
+première instance lancée crée le schéma, les suivantes constatent qu'il est à
+jour.
+
 ### 4. Lancer le serveur
 
 Les migrations s'appliquent automatiquement au démarrage.
