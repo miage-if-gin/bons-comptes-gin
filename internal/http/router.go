@@ -20,6 +20,7 @@ type Deps struct {
 	Renderer *web.Renderer
 	Accounts *service.AccountService
 	Auth     *service.AuthService
+	Expenses *service.ExpenseService
 }
 
 func NewRouter(d Deps) *gin.Engine {
@@ -37,6 +38,7 @@ func NewRouter(d Deps) *gin.Engine {
 	prive := r.Group("/", exigerCompte())
 
 	registerWallets(prive, d)
+	registerExpenses(prive, d)
 
 	return r
 }

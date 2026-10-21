@@ -1,0 +1,135 @@
+{{ define "content" }}
+<div class="mx-auto max-w-4xl">
+    <div class="flex items-center justify-between border-b border-slate-200 pb-4">
+        <div>
+            <a href="/wallets/{{ .Page.Wallet.ID }}" class="text-sm text-slate-500 hover:underline">&larr; {{ .Page.Wallet.Name }}</a>
+            <h1 class="mt-1 text-2xl font-semibold text-slate-900">Dépenses</h1>
+        </div>
+        <div class="text-right">
+            <p class="text-sm text-slate-500">Total ({{ .Page.NbDepenses }} dépense{{ if gt .Page.NbDepenses 1 }}s{{ end }})</p>
+            <p class="text-2xl font-semibold text-slate-900">{{ .Page.Total }}</p>
+        </div>
+    </div>
+
+    {{ if .Erreur }}
+    <p class="mt-6 rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+        {{ .Erreur }}
+    </p>
+    {{ end }}
+
+    {{ if .Page.Ouvert }}
+    <div class="mt-6 rounded-lg border border-slate-200 bg-white p-6">
+        <h2 class="text-lg font-medium text-slate-900">Déclarer une dépense</h2>
+
+        <form action="/wallets/{{ .Page.Wallet.ID }}/expenses" method="POST"
+              class="mt-4 grid gap-4 md:grid-cols-2">
+            <div class="md:col-span-2">
+                <label for="label" class="block text-sm font-medium">Libellé</label>
+                <input type="text" id="label" name="label" required maxlength="200"
+                       value="{{ .Saisie.Libelle }}" placeholder="Ex : courses du samedi"
+                       class="mt-1 w-full rounded border border-slate-300 px-3 py-2">
+            </div>
+
+            <div>
+                <label for="amount" class="block text-sm font-medium">Montant (€)</label>
+                <input type="text" id="amount" name="amount" required inputmode="decimal"
+                       value="{{ .Saisie.Montant }}" placeholder="12,50"
+                       class="mt-1 w-full rounded border border-slate-300 px-3 py-2">
+            </div>
+
+            <div>
+                <label for="spent_at" class="block text-sm font-medium">Date</label>
+                <input type="date" id="spent_at" name="spent_at"
+                       value="{{ if .Saisie.Date }}{{ .Saisie.Date }}{{ else }}{{ .Aujourdhui }}{{ end }}"
+                       class="mt-1 w-full rounded border border-slate-300 px-3 py-2">
+            </div>
+
+            <div class="md:col-span-2">
+                <label for="payer_id" class="block text-sm font-medium">Payé par</label>
+                <select id="payer_id" name="payer_id"
+                        class="mt-1 w-full rounded border border-slate-300 px-3 py-2">
+                    <option value="">— Non attribué —</option>
+                    {{ range .Page.Membres }}
+                    <option value="{{ .ID }}" {{ if eq (printf "%d" .ID) $.Saisie.PayeurID }}selected{{ end }}>
+                        {{ .DisplayName }}
+                    </option>
+                    {{ end }}
+                </select>
+            </div>
+
+            <div class="md:col-span-2">
+                <button type="submit"
+                        class="rounded bg-slate-900 px-4 py-2 text-white hover:bg-slate-700">
+                    Ajouter la dépense
+                </button>
+            </div>
+        </form>
+    </div>
+    {{ else }}
+    <p class="mt-6 rounded border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
+        Ce porte-monnaie est clos : les dépenses ne peuvent plus être modifiées.
+    </p>
+    {{ end }}
+
+    <div class="mt-8 overflow-hidden rounded-lg border border-slate-200 bg-white">
+        {{ if .Page.Lignes }}
+        <table class="w-full text-sm">
+            <thead class="bg-slate-50 text-left text-slate-500">
+            <tr>
+                <th class="px-4 py-3 font-medium">Date</th>
+                <th class="px-4 py-3 font-medium">Libellé</th>
+                <th class="px-4 py-3 font-medium">Payé par</th>
+                <th class="px-4 py-3 font-medium">Saisi par</th>
+                <th class="px-4 py-3 text-right font-medium">Montant</th>
+                <th class="px-4 py-3"></th>
+            </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+            {{ range .Page.Lignes }}
+            <tr>
+                <td class="whitespace-nowrap px-4 py-3 text-slate-500">{{ .SpentAt.Format "02/01/2006" }}</td>
+                <td class="px-4 py-3">{{ .Label }}</td>
+                <td class="px-4 py-3">
+                    {{ if .PayerName }}{{ .PayerName }}{{ else }}<span class="text-slate-400">non attribué</span>{{ end }}
+                </td>
+                <td class="px-4 py-3 text-slate-500">{{ .CreatorName }}</td>
+                <td class="whitespace-nowrap px-4 py-3 text-right font-medium">{{ .Montant }}</td>
+                <td class="px-4 py-3 text-right">
+                    {{ if .PeutSupprimer }}
+                    <form action="/wallets/{{ .WalletID }}/expenses/{{ .ID }}/delete" method="POST"
+                          onsubmit="return confirm('Supprimer cette dépense ?');">
+                        <button type="submit" class="text-red-700 hover:underline">Supprimer</button>
+                    </form>
+                    {{ end }}
+                </td>
+            </tr>
+            {{ end }}
+            </tbody>
+            <tfoot class="border-t-2 border-slate-200 bg-slate-50">
+            <tr>
+                <td colspan="4" class="px-4 py-3 font-medium">
+                    Total ({{ .Page.NbDepenses }} dépense{{ if gt .Page.NbDepenses 1 }}s{{ end }})
+                </td>
+                <td class="whitespace-nowrap px-4 py-3 text-right font-semibold">{{ .Page.Total }}</td>
+                <td></td>
+            </tr>
+            </tfoot>
+        </table>
+        {{ else }}
+        <p class="p-6 text-center text-sm text-slate-500">Aucune dépense pour l'instant.</p>
+        {{ end }}
+    </div>
+
+    {{ if gt .Page.NbPages 1 }}
+    <div class="mt-4 flex items-center justify-between text-sm">
+        {{ if .Page.APrecedente }}
+        <a href="?page={{ .Page.PagePrecedente }}" class="hover:underline">&larr; Plus récentes</a>
+        {{ else }}<span></span>{{ end }}
+        <span class="text-slate-500">Page {{ .Page.Page }} / {{ .Page.NbPages }}</span>
+        {{ if .Page.ASuivante }}
+        <a href="?page={{ .Page.PageSuivante }}" class="hover:underline">Plus anciennes &rarr;</a>
+        {{ else }}<span></span>{{ end }}
+    </div>
+    {{ end }}
+</div>
+{{ end }}
