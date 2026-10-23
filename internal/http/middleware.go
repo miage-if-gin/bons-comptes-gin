@@ -31,10 +31,12 @@ func chargerCompte(d Deps) gin.HandlerFunc {
 func exigerCompte() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if _, ok := c.Get(cleCompteCourant); !ok {
-			// Abort interrompt la chaîne : sans lui, les handlers suivants
-			// s'exécuteraient malgré la redirection.
-			c.AbortWithStatus(http.StatusSeeOther)
-			c.Header("Location", "/login")
+			// c.Redirect pose le Location avant l'écriture des en-têtes.
+			// Avec AbortWithStatus, ils partaient immédiatement et le
+			// Location ajouté ensuite était perdu : le navigateur recevait
+			// un 303 sans destination.
+			c.Redirect(http.StatusSeeOther, "/login")
+			c.Abort()
 			return
 		}
 		c.Next()
