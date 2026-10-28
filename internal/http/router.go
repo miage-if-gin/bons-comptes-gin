@@ -21,6 +21,7 @@ type Deps struct {
 	Accounts *service.AccountService
 	Auth     *service.AuthService
 	Expenses *service.ExpenseService
+	Closure  *service.ClosureService
 }
 
 func NewRouter(d Deps) *gin.Engine {
@@ -39,6 +40,7 @@ func NewRouter(d Deps) *gin.Engine {
 
 	registerWallets(prive, d)
 	registerExpenses(prive, d)
+	registerClosure(prive, d)
 
 	return r
 }
