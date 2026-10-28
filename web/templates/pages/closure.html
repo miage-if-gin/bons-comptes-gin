@@ -1,0 +1,151 @@
+{{ define "content" }}
+<div class="mx-auto max-w-4xl">
+    <div class="flex items-center justify-between border-b border-slate-200 pb-4">
+        <div>
+            <a href="/wallets/{{ .Page.Wallet.ID }}" class="text-sm text-slate-500 hover:underline">&larr; {{ .Page.Wallet.Name }}</a>
+            <h1 class="mt-1 text-2xl font-semibold text-slate-900">
+                {{ if .Page.Ouvert }}Soldes et clôture{{ else }}Comptes de clôture{{ end }}
+            </h1>
+        </div>
+        <div class="text-right">
+            <p class="text-sm text-slate-500">Total des dépenses</p>
+            <p class="text-2xl font-semibold text-slate-900">{{ .Page.Total }}</p>
+        </div>
+    </div>
+
+    {{ if .Erreur }}
+    <p class="mt-6 rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+        {{ .Erreur }}
+    </p>
+    {{ end }}
+
+    {{ if .Page.Ouvert }}
+    <div class="mt-6 rounded-lg border border-amber-200 bg-amber-50 p-5 text-sm text-amber-900">
+        <p>
+            Aperçu : voici les comptes si le porte-monnaie était clôturé maintenant.
+            La clôture fige les dépenses et enregistre les virements à effectuer.
+        </p>
+        {{ if .Page.EstProprietaire }}
+        <form action="/wallets/{{ .Page.Wallet.ID }}/closure" method="POST" class="mt-4"
+              onsubmit="return confirm('Clôturer ce porte-monnaie ? Les dépenses ne pourront plus être modifiées.');">
+            <button type="submit" class="rounded bg-slate-900 px-4 py-2 text-white hover:bg-slate-700">
+                Clôturer le porte-monnaie
+            </button>
+        </form>
+        {{ else }}
+        <p class="mt-2 text-amber-800">Seul le créateur du porte-monnaie peut le clôturer.</p>
+        {{ end }}
+    </div>
+    {{ else }}
+    <p class="mt-6 rounded border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
+        Porte-monnaie clos le {{ .Page.Wallet.ClosedAt.Format "02/01/2006 à 15:04" }}.
+    </p>
+    {{ end }}
+
+    <div class="mt-8 grid gap-4 md:grid-cols-2">
+        <div class="rounded-lg border border-slate-200 bg-white p-5">
+            <h2 class="font-medium text-slate-900">Doivent donner</h2>
+            {{ with .Page.Debiteurs }}
+            <ul class="mt-3 divide-y divide-slate-100 text-sm">
+                {{ range . }}
+                <li class="flex justify-between py-2">
+                    <span>{{ .Nom }}</span>
+                    <span class="font-medium text-red-700">{{ .Montant }}</span>
+                </li>
+                {{ end }}
+            </ul>
+            {{ else }}
+            <p class="mt-3 text-sm text-slate-500">Personne.</p>
+            {{ end }}
+        </div>
+
+        <div class="rounded-lg border border-slate-200 bg-white p-5">
+            <h2 class="font-medium text-slate-900">Doivent recevoir</h2>
+            {{ with .Page.Crediteurs }}
+            <ul class="mt-3 divide-y divide-slate-100 text-sm">
+                {{ range . }}
+                <li class="flex justify-between py-2">
+                    <span>{{ .Nom }}</span>
+                    <span class="font-medium text-green-700">{{ .Montant }}</span>
+                </li>
+                {{ end }}
+            </ul>
+            {{ else }}
+            <p class="mt-3 text-sm text-slate-500">Personne.</p>
+            {{ end }}
+        </div>
+    </div>
+
+    <div class="mt-8 rounded-lg border border-slate-200 bg-white">
+        <h2 class="border-b border-slate-200 px-4 py-3 font-medium text-slate-900">
+            Qui donne combien à qui
+        </h2>
+
+        {{ if .Page.Ouvert }}
+        {{ with .Page.Apercu }}
+        <ul class="divide-y divide-slate-100 text-sm">
+            {{ range . }}
+            <li class="flex justify-between px-4 py-3">
+                <span>{{ .DeNom }} &rarr; {{ .VersNom }}</span>
+                <span class="font-medium">{{ .Montant }}</span>
+            </li>
+            {{ end }}
+        </ul>
+        {{ else }}
+        <p class="p-6 text-center text-sm text-slate-500">Aucun virement nécessaire : les comptes sont déjà justes.</p>
+        {{ end }}
+        {{ else }}
+        {{ with .Page.Virements }}
+        <ul class="divide-y divide-slate-100 text-sm">
+            {{ range . }}
+            <li class="flex items-center justify-between gap-4 px-4 py-3">
+                <span>{{ .FromName }} &rarr; {{ .ToName }}</span>
+                <span class="flex items-center gap-4">
+                        <span class="font-medium">{{ .Montant }}</span>
+                        {{ if .Rembourse }}
+                        <span class="rounded-md bg-green-50 px-2 py-1 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20">
+                            Remboursé le {{ .SettledAt.Format "02/01/2006" }}
+                        </span>
+                        {{ else if .PeutRembourser }}
+                        <form action="/wallets/{{ .WalletID }}/settlements/{{ .ID }}/repay" method="POST">
+                            <button type="submit" class="rounded bg-slate-900 px-3 py-1 text-white hover:bg-slate-700">
+                                Rembourser
+                            </button>
+                        </form>
+                        {{ else }}
+                        <span class="text-xs text-slate-400">en attente</span>
+                        {{ end }}
+                    </span>
+            </li>
+            {{ end }}
+        </ul>
+        {{ else }}
+        <p class="p-6 text-center text-sm text-slate-500">Aucun virement nécessaire : les comptes étaient justes.</p>
+        {{ end }}
+        {{ end }}
+    </div>
+
+    <div class="mt-8 overflow-hidden rounded-lg border border-slate-200 bg-white">
+        <table class="w-full text-sm">
+            <thead class="bg-slate-50 text-left text-slate-500">
+            <tr>
+                <th class="px-4 py-3 font-medium">Membre</th>
+                <th class="px-4 py-3 text-right font-medium">A payé</th>
+                <th class="px-4 py-3 text-right font-medium">Sa part</th>
+                <th class="px-4 py-3 text-right font-medium">Solde</th>
+            </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+            {{ range .Page.Soldes }}
+            <tr>
+                <td class="px-4 py-3">{{ .Nom }}</td>
+                <td class="whitespace-nowrap px-4 py-3 text-right">{{ .Paye }}</td>
+                <td class="whitespace-nowrap px-4 py-3 text-right text-slate-500">{{ .Part }}</td>
+                <td class="whitespace-nowrap px-4 py-3 text-right font-medium">{{ .Net }}</td>
+            </tr>
+            {{ end }}
+            </tbody>
+        </table>
+    </div>
+</div>
+{{ end }}
