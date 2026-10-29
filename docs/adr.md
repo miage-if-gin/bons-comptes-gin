@@ -242,3 +242,49 @@ actuellement en clair sur le réseau universitaire, mots de passe compris.
 `openssl rand -hex 24` et non `-base64` : les caractères `/`, `@`, `:` et `?`
 ont une signification dans une URL de connexion et la coupent silencieusement.
 Erreur rencontrée et à signaler aux participants.
+
+
+---
+
+## ADR-010 — Règles de la clôture
+
+**Contexte.** L'énoncé demande, à la clôture, la liste des comptes qui
+doivent donner et recevoir, et en bonus « qui donne combien à qui en
+minimisant les virements ». Plusieurs points ne sont pas précisés.
+
+**Décisions.**
+
+| Question                            | Choix                                                                |
+|-------------------------------------|----------------------------------------------------------------------|
+| Qui peut clôturer ?                 | le créateur du porte-monnaie uniquement                              |
+| Dépense sans payeur                 | imputée au compte qui l'a saisie                                     |
+| Centimes qui ne se divisent pas     | un centime de plus aux premiers membres, par ordre d'identifiant     |
+| Calcul des soldes                   | `SUM ... GROUP BY` en SQL brut, partage et virements en Go           |
+| Minimisation des virements          | paires exactes d'abord, puis glouton (au plus n − 1 virements)       |
+| Remboursement                       | simulé : le débiteur clique, on enregistre la date (`settled_at`)    |
+
+**Pourquoi.**
+
+- *Créateur seul.* Clôturer est irréversible : les dépenses sont figées. Le
+  laisser à n'importe quel membre permettrait de couper l'herbe sous le pied
+  des autres.
+- *Dépense sans payeur.* Si personne n'est crédité, l'argent dépensé
+  disparaît du calcul et la somme des soldes ne vaut plus zéro. La personne
+  qui saisit la dépense est la plus probablement celle qui l'a réglée.
+- *Reste des centimes.* 1 € entre trois ne tombe pas juste. Plutôt que de
+  perdre un centime ou d'arrondir en flottant (ADR-004), on l'attribue
+  explicitement et de façon reproductible. La somme des soldes vaut ainsi
+  toujours exactement zéro.
+- *SQL / Go.* PostgreSQL additionne sans charger les dépenses en mémoire
+  (« Think HUGE »). Le partage et l'algorithme restent en Go, dans des
+  fonctions pures testées sans base (ADR-008).
+- *Glouton.* Le minimum absolu de virements est un problème NP-difficile :
+  il faut chercher le plus grand nombre de sous-groupes dont les soldes
+  s'annulent. L'heuristique retenue reste en O(n log n), garantit au plus
+  n − 1 virements, et l'étape des paires exactes règle le cas fréquent où
+  deux montants se compensent tout juste.
+
+**Conséquences.** Les virements sont calculés une seule fois, à la clôture,
+et enregistrés dans `settlements` : ils ne changent plus ensuite. La clôture
+et l'écriture des virements se font dans une transaction, et la condition
+`status = 'open'` empêche une double clôture simultanée.

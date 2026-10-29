@@ -55,10 +55,12 @@ func main() {
 	sessionRepo := repository.NewSessionRepository(gdb)
 	walletRepo := repository.NewWalletRepository(gdb)
 	expenseRepo := repository.NewExpenseRepository(gdb)
+	settlementRepo := repository.NewSettlementRepository(gdb)
 
 	accountSvc := service.NewAccountService(accountRepo)
 	authSvc := service.NewAuthService(accountRepo, sessionRepo)
 	expenseSvc := service.NewExpenseService(expenseRepo, walletRepo)
+	closureSvc := service.NewClosureService(walletRepo, settlementRepo)
 
 	r := apphttp.NewRouter(apphttp.Deps{
 		Cfg:      cfg,
@@ -67,6 +69,7 @@ func main() {
 		Accounts: accountSvc,
 		Auth:     authSvc,
 		Expenses: expenseSvc,
+		Closure:  closureSvc,
 	})
 
 	srv := &http.Server{
