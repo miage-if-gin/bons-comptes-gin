@@ -41,7 +41,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	renderer, err := web.NewRenderer("web/templates")
+	renderer, err := web.NewRenderer()
 	if err != nil {
 		slog.Error("chargement des templates", "error", err)
 		os.Exit(1)
