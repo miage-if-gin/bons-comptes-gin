@@ -169,16 +169,20 @@ func (l LigneVirement) Rembourse() bool { return l.SettledAt != nil }
 
 // PageCloture rassemble tout ce qu'affiche la page de clôture.
 type PageCloture struct {
-	Wallet          domain.Wallet
-	Soldes          []Solde
-	Apercu          []Virement      // porte-monnaie ouvert : ce que donnerait la clôture
-	Virements       []LigneVirement // porte-monnaie clos : virements enregistrés
-	TotalCents      int64
-	EstProprietaire bool
+	Wallet            domain.Wallet
+	Soldes            []Solde
+	Apercu            []Virement      // porte-monnaie ouvert : ce que donnerait la clôture
+	Virements         []LigneVirement // porte-monnaie clos : virements enregistrés
+	TotalCents        int64
+	NonAttribuesCents int64
+	EstProprietaire   bool
 }
 
 func (p PageCloture) Ouvert() bool  { return p.Wallet.Status == "open" }
 func (p PageCloture) Total() string { return FormatMontant(p.TotalCents) }
+
+// NonAttribues : total des dépenses sans payeur, affiché à part.
+func (p PageCloture) NonAttribues() string { return FormatMontant(p.NonAttribuesCents) }
 
 // Debiteurs : la liste « qui doit donner de l'argent, et combien ».
 func (p PageCloture) Debiteurs() []Solde {
@@ -205,10 +209,11 @@ func (p PageCloture) Crediteurs() []Solde {
 type ClosureService struct {
 	wallets     *repository.WalletRepository
 	settlements *repository.SettlementRepository
+	expenses    *repository.ExpenseRepository
 }
 
-func NewClosureService(w *repository.WalletRepository, s *repository.SettlementRepository) *ClosureService {
-	return &ClosureService{wallets: w, settlements: s}
+func NewClosureService(w *repository.WalletRepository, s *repository.SettlementRepository, e *repository.ExpenseRepository) *ClosureService {
+	return &ClosureService{wallets: w, settlements: s, expenses: e}
 }
 
 // Consulter renvoie les soldes du porte-monnaie, avec l'aperçu des virements
@@ -228,10 +233,19 @@ func (s *ClosureService) Consulter(ctx context.Context, walletID, accountID int6
 		Soldes:          soldes,
 		EstProprietaire: wallet.OwnerID == accountID,
 	}
-	for _, so := range soldes {
-		page.TotalCents += so.PayeCents
+	// Le total vient de la table des dépenses, comme sur la page des
+	// dépenses : il inclut les dépenses sans payeur.
+	_, total, err := s.expenses.Totals(ctx, walletID)
+	if err != nil {
+		return nil, err
 	}
+	page.TotalCents = total
 
+	// Ce qui n'a été avancé par personne n'entre pas dans les soldes.
+	page.NonAttribuesCents = total
+	for _, so := range soldes {
+		page.NonAttribuesCents -= so.PayeCents
+	}
 	if page.Ouvert() {
 		page.Apercu = MinimiserVirements(soldes)
 		return page, nil

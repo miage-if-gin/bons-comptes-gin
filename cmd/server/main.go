@@ -60,7 +60,7 @@ func main() {
 	accountSvc := service.NewAccountService(accountRepo)
 	authSvc := service.NewAuthService(accountRepo, sessionRepo)
 	expenseSvc := service.NewExpenseService(expenseRepo, walletRepo)
-	closureSvc := service.NewClosureService(walletRepo, settlementRepo)
+	closureSvc := service.NewClosureService(walletRepo, settlementRepo, expenseRepo)
 
 	r := apphttp.NewRouter(apphttp.Deps{
 		Cfg:      cfg,
