@@ -25,8 +25,8 @@ func (r *SettlementRepository) PaidByAccount(ctx context.Context, walletID int64
 	err := r.db.WithContext(ctx).
 		Raw(`SELECT a.id AS account_id, a.display_name, SUM(e.amount_cents)::BIGINT AS paid_cents
 			FROM expenses e
-			JOIN accounts a ON a.id = COALESCE(e.payer_id, e.created_by)
-			WHERE e.wallet_id = ?
+			JOIN accounts a ON a.id = e.payer_id
+			WHERE e.wallet_id = ? AND e.payer_id IS NOT NULL
 			GROUP BY a.id, a.display_name
 			ORDER BY a.id`, walletID).
 		Scan(&rows).Error

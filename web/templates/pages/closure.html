@@ -37,8 +37,17 @@
         {{ end }}
     </div>
     {{ else }}
+    {{ with .Page.Wallet.ClosedAt }}
     <p class="mt-6 rounded border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
-        Porte-monnaie clos le {{ .Page.Wallet.ClosedAt.Format "02/01/2006 à 15:04" }}.
+        Porte-monnaie clos le {{ .Format "02/01/2006 à 15:04" }}.
+    </p>
+    {{ end }}
+    {{ end }}
+
+    {{ if .Page.NonAttribuesCents }}
+    <p class="mt-4 rounded border border-slate-200 bg-white px-3 py-2 text-sm text-slate-600">
+        Dont {{ .Page.NonAttribues }} de dépenses sans payeur, non réparties :
+        personne ne les a avancées, elles n'entrent pas dans les soldes ci-dessous.
     </p>
     {{ end }}
 
