@@ -1,5 +1,5 @@
 # Étape 1 : compilation
-FROM golang:1.27-alpine AS build
+FROM --platform=linux/amd64 golang:1.27-alpine AS build
 
 WORKDIR /src
 

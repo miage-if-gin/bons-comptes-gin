@@ -254,14 +254,14 @@ minimisant les virements ». Plusieurs points ne sont pas précisés.
 
 **Décisions.**
 
-| Question                            | Choix                                                                |
-|-------------------------------------|----------------------------------------------------------------------|
-| Qui peut clôturer ?                 | le créateur du porte-monnaie uniquement                              |
-| Dépense sans payeur                 | imputée au compte qui l'a saisie                                     |
-| Centimes qui ne se divisent pas     | un centime de plus aux premiers membres, par ordre d'identifiant     |
-| Calcul des soldes                   | `SUM ... GROUP BY` en SQL brut, partage et virements en Go           |
-| Minimisation des virements          | paires exactes d'abord, puis glouton (au plus n − 1 virements)       |
-| Remboursement                       | simulé : le débiteur clique, on enregistre la date (`settled_at`)    |
+| Question                        | Choix                                                             |
+|---------------------------------|-------------------------------------------------------------------|
+| Qui peut clôturer ?             | le créateur du porte-monnaie uniquement                           |
+| Dépense sans payeur             | imputée au compte qui l'a saisie                                  |
+| Centimes qui ne se divisent pas | un centime de plus aux premiers membres, par ordre d'identifiant  |
+| Calcul des soldes               | `SUM ... GROUP BY` en SQL brut, partage et virements en Go        |
+| Minimisation des virements      | paires exactes d'abord, puis glouton (au plus n − 1 virements)    |
+| Remboursement                   | simulé : le débiteur clique, on enregistre la date (`settled_at`) |
 
 **Pourquoi.**
 
@@ -288,3 +288,27 @@ minimisant les virements ». Plusieurs points ne sont pas précisés.
 et enregistrés dans `settlements` : ils ne changent plus ensuite. La clôture
 et l'écriture des virements se font dans une transaction, et la condition
 `status = 'open'` empêche une double clôture simultanée.
+
+---
+
+## ADR-012 — Déploiement par image Docker transférée
+
+**Contexte.** L'application doit tourner sur la VM du FIL, à côté de sa base.
+
+**Options.** Construire sur la VM depuis Git, passer par un registre, ou
+transférer l'image par SSH.
+
+**Décision.** Construction en local, `docker save` puis `scp`, `docker load`
+sur la VM.
+
+**Pourquoi.** La VM n'a que 2 Go de RAM et pas de toolchain Go. Un registre
+demanderait un compte et des identifiants à gérer. Le transfert d'une image
+de 13 Mo prend deux secondes.
+
+**Conséquences.** Le déploiement est manuel : pas de livraison continue.
+Acceptable pour un projet de quelques semaines, à automatiser dans un vrai
+projet — c'est précisément ce qu'apporte une chaîne de CI/CD.
+
+L'image est construite pour `linux/amd64` : un binaire Go est lié à une
+architecture, et développer sur Mac ARM pour déployer sur x86 impose de le
+préciser. Contrainte absente des langages interprétés.
