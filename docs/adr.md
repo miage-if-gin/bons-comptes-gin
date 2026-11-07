@@ -228,21 +228,29 @@ question de transfert de données hors UE.
 **Conséquences.** La base n'est pas joignable hors campus sans le VPN du FIL.
 Nous administrons nous-mêmes le serveur : configuration, pare-feu, sauvegardes,
 supervision — ce qui alimente directement la partie « configuration et
-déploiement en production » attendue dans l'atelier. La même VM servira à
+déploiement en production » attendue dans l'atelier. La même VM sert aussi à
 déployer l'application.
 
 Le changement d'hébergeur n'aurait coûté qu'une variable d'environnement : le
 code ne connaît pas son fournisseur de base. C'est le bénéfice concret du
 principe III des Twelve-Factor Apps.
 
-**À faire avant l'atelier.** Activer TLS côté PostgreSQL : le trafic passe
-actuellement en clair sur le réseau universitaire, mots de passe compris.
+**TLS.** PostgreSQL écoute en TLS 1.3 avec un certificat auto-signé, monté en
+lecture seule dans le conteneur. Vérifié : `pg_stat_ssl` confirme `ssl = t`
+sur la connexion de l'application.
 
-**Détail de mise en œuvre.** Le mot de passe de la base est généré avec
-`openssl rand -hex 24` et non `-base64` : les caractères `/`, `@`, `:` et `?`
-ont une signification dans une URL de connexion et la coupent silencieusement.
-Erreur rencontrée et à signaler aux participants.
+Le certificat chiffre le transport mais n'atteste pas l'identité du serveur,
+faute d'autorité de certification. Suffisant ici : la VM est sur le réseau
+interne et nous contrôlons les deux extrémités. Un déploiement public exigerait
+un certificat signé.
 
+**Pièges rencontrés.** PostgreSQL refuse de démarrer si sa clé privée
+n'appartient pas à son utilisateur : l'UID de `postgres` est 70 sur les images
+Alpine, contre 999 sur les images Debian.
+
+Le mot de passe de la base est généré avec `openssl rand -hex 24` et non
+`-base64` : les caractères `/`, `@`, `:` et `?` ont une signification dans une
+URL de connexion et la coupent silencieusement.
 
 ---
 
@@ -257,7 +265,7 @@ minimisant les virements ». Plusieurs points ne sont pas précisés.
 | Question                        | Choix                                                             |
 |---------------------------------|-------------------------------------------------------------------|
 | Qui peut clôturer ?             | le créateur du porte-monnaie uniquement                           |
-| Dépense sans payeur             | révisé : voir ADR-011                                             |            |
+| Dépense sans payeur             | révisé : voir ADR-011                                             |
 | Centimes qui ne se divisent pas | un centime de plus aux premiers membres, par ordre d'identifiant  |
 | Calcul des soldes               | `SUM ... GROUP BY` en SQL brut, partage et virements en Go        |
 | Minimisation des virements      | paires exactes d'abord, puis glouton (au plus n − 1 virements)    |
@@ -268,9 +276,7 @@ minimisant les virements ». Plusieurs points ne sont pas précisés.
 - *Créateur seul.* Clôturer est irréversible : les dépenses sont figées. Le
   laisser à n'importe quel membre permettrait de couper l'herbe sous le pied
   des autres.
-- *Dépense sans payeur.* Si personne n'est crédité, l'argent dépensé
-  disparaît du calcul et la somme des soldes ne vaut plus zéro. La personne
-  qui saisit la dépense est la plus probablement celle qui l'a réglée.
+- *Dépense sans payeur.* Décision révisée : voir l'ADR-011.
 - *Reste des centimes.* 1 € entre trois ne tombe pas juste. Plutôt que de
   perdre un centime ou d'arrondir en flottant (ADR-004), on l'attribue
   explicitement et de façon reproductible. La somme des soldes vaut ainsi
@@ -288,7 +294,6 @@ minimisant les virements ». Plusieurs points ne sont pas précisés.
 et enregistrés dans `settlements` : ils ne changent plus ensuite. La clôture
 et l'écriture des virements se font dans une transaction, et la condition
 `status = 'open'` empêche une double clôture simultanée.
-
 
 ---
 
@@ -341,6 +346,6 @@ L'image est construite pour `linux/amd64` : un binaire Go est lié à une
 architecture, et développer sur Mac ARM pour déployer sur x86 impose de le
 préciser. Contrainte absente des langages interprétés.
 
-Piège : dans un Dockerfile multi-stage, `--platform` ne vaut que pour l'étape
-où il est écrit. Il faut le porter sur chaque `FROM`, sinon l'image finale
-reprend l'architecture de la machine de build.
+**Piège.** Dans un Dockerfile multi-stage, `--platform` ne vaut que pour
+l'étape où il est écrit. Il faut le porter sur chaque `FROM`, sinon l'image
+finale reprend l'architecture de la machine de build.
