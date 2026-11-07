@@ -41,3 +41,6 @@ test: ## Lance les tests
 
 tidy: ## Nettoie go.mod et go.sum
 	go mod tidy
+
+seed: ## Peuple la base de données de démonstration
+	go run ./cmd/seed
