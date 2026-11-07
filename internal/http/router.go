@@ -26,12 +26,15 @@ type Deps struct {
 
 func NewRouter(d Deps) *gin.Engine {
 	r := gin.Default()
+	// Premier middleware : il englobe le temps de tous les suivants.
+	r.Use(mesurer())
 
 	r.Use(chargerCompte(d))
 
 	r.Static("/static", "web/static")
 
 	registerHealth(r, d)
+	registerMetrics(r)
 	registerPages(r, d)
 	registerAuth(r, d)
 	registerLogin(r, d)
