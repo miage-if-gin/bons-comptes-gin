@@ -16,7 +16,7 @@ COPY . .
 RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o /serveur ./cmd/server
 
 # Étape 2 : image finale
-FROM alpine:3.21
+FROM --platform=linux/amd64 alpine:3.21
 
 # ca-certificates : nécessaire si la base exige TLS (sslmode=require).
 RUN apk add --no-cache ca-certificates \
