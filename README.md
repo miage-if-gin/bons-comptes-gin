@@ -113,6 +113,8 @@ l'extérieur. Les migrations s'appliquent automatiquement au démarrage : la
 première instance lancée crée le schéma, les suivantes constatent qu'il est à
 jour.
 
+La connexion est chiffrée : l'URL se termine par `?sslmode=require`.
+
 ### 4. Lancer le serveur
 
 Les migrations s'appliquent automatiquement au démarrage.
@@ -182,12 +184,12 @@ Le `docker-compose.yml` de la VM déclare PostgreSQL et l'application sur le
 même réseau : l'application joint la base par le nom de service `postgres`.
 Les secrets y sont renseignés en clair, le fichier ne quitte pas la VM.
 
-| Variable         | Valeur en production                                       |
-|------------------|------------------------------------------------------------|
-| `APP_ENV`        | `production` — Gin en mode release, logs SQL réduits       |
-| `PORT`           | `8080`                                                     |
-| `DATABASE_URL`   | `postgres://bonscomptes:…@postgres:5432/bonscomptes`       |
-| `SESSION_SECRET` | généré une fois, stable — le changer invalide les sessions |
+| Variable         | Valeur en production                                                 |
+|------------------|----------------------------------------------------------------------|
+| `APP_ENV`        | `production` — Gin en mode release, logs SQL réduits                 |
+| `PORT`           | `8080`                                                               |
+| `DATABASE_URL`   | `postgres://bonscomptes:…@postgres:5432/bonscomptes?sslmode=require` |
+| `SESSION_SECRET` | généré une fois, stable — le changer invalide les sessions           |
 
 ### Vérifier
 
