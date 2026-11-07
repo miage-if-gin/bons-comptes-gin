@@ -122,6 +122,25 @@ Les migrations s'appliquent automatiquement au démarrage.
 
 L'application est disponible sur http://localhost:8080.
 
+### Jeu de données de démonstration
+
+Pour travailler sur un volume réaliste plutôt qu'une base vide :
+
+    make seed
+
+Crée 40 comptes, 25 porte-monnaies et 5000 dépenses en 200 ms environ. Tous
+les comptes générés ont l'adresse `prenomN-timestamp@demo.local` et le mot de
+passe `demo1234`.
+
+    go run ./cmd/seed -comptes 100 -portemonnaies 50 -depenses 20000
+
+Les données reflètent les cas réels : les trois statuts d'appartenance sont
+représentés, et une dépense sur six n'a pas de payeur. La graine aléatoire
+est fixe, deux exécutions produisent donc le même jeu.
+
+Le seed écrit directement en base, sans passer par les services : à réserver
+au développement et aux démonstrations.
+
 ### Commandes utiles
 
     make help        # liste toutes les commandes
@@ -131,6 +150,7 @@ L'application est disponible sur http://localhost:8080.
     make test        # tests avec détection de data races
     make down        # arrête les conteneurs
     make reset       # détruit la base et ses données
+    make seed        # peuple la base de données de démonstration
 
 ### Notes Windows
 
