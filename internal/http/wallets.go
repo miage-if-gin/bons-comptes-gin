@@ -5,13 +5,30 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 
 	"github.com/miage-if-gin/bons-comptes-gin/internal/domain"
+	"github.com/miage-if-gin/bons-comptes-gin/internal/service"
 )
+
+// DashboardRow est une ligne du tableau de bord « Mes porte-monnaies ».
+type DashboardRow struct {
+	ID                int64
+	Name              string
+	WalletStatus      string
+	MemberStatus      string
+	MemberCount       int
+	TotalExpenseCents int64
+}
+
+// Total formate le montant pour le template. Go n'autorise pas de méthode
+// sur un type déclaré à l'intérieur d'une fonction, d'où la sortie au
+// niveau du package.
+func (r DashboardRow) Total() string { return service.FormatMontant(r.TotalExpenseCents) }
 
 func registerWallets(private *gin.RouterGroup, d Deps) {
 
@@ -89,6 +106,12 @@ func registerWallets(private *gin.RouterGroup, d Deps) {
 			c.String(http.StatusForbidden, "Vous n'avez pas accès à ce porte-monnaie")
 			return
 		}
+		// Refuser une invitation retire l'accès : sans ce test, seule
+		// l'existence de la ligne était vérifiée, pas son statut.
+		if member.Status == "declined" {
+			c.String(http.StatusForbidden, "Vous avez refusé l'invitation à ce porte-monnaie")
+			return
+		}
 
 		d.Renderer.Render(c, http.StatusOK, "wallets_show.html", gin.H{
 			"Title":  wallet.Name,
@@ -104,7 +127,7 @@ func registerWallets(private *gin.RouterGroup, d Deps) {
 			return
 		}
 
-		email := c.PostForm("email")
+		email := strings.ToLower(strings.TrimSpace(c.PostForm("email")))
 		if email == "" {
 			c.String(http.StatusBadRequest, "L'email est requis")
 			return
@@ -159,15 +182,6 @@ func registerWallets(private *gin.RouterGroup, d Deps) {
 		c.Redirect(http.StatusSeeOther, fmt.Sprintf("/wallets/%d", walletID))
 	})
 
-	type DashboardRow struct {
-		ID            int64
-		Name          string
-		WalletStatus  string
-		MemberStatus  string
-		MemberCount   int
-		TotalExpenses float64
-	}
-
 	private.GET("/wallets", func(c *gin.Context) {
 		currentAccount := CompteCourant(c)
 
@@ -180,7 +194,7 @@ func registerWallets(private *gin.RouterGroup, d Deps) {
         				w.status as wallet_status,
         				wm.status as member_status,
         				(SELECT COUNT(account_id) FROM wallet_members WHERE wallet_id = w.id AND status = 'accepted') as member_count,
-        				0 as total_expenses
+        				(SELECT COALESCE(SUM(amount_cents), 0)::BIGINT FROM expenses WHERE wallet_id = w.id) as total_expense_cents
         			`).
 			Joins("JOIN wallet_members wm ON wm.wallet_id = w.id").
 			Where("wm.account_id = ?", currentAccount.ID).

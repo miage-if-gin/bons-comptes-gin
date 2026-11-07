@@ -2,10 +2,12 @@ package http
 
 import (
 	"context"
+	"io/fs"
 	"net/http"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	assets "github.com/miage-if-gin/bons-comptes-gin/web"
 	"gorm.io/gorm"
 
 	"github.com/miage-if-gin/bons-comptes-gin/internal/config"
@@ -31,7 +33,10 @@ func NewRouter(d Deps) *gin.Engine {
 
 	r.Use(chargerCompte(d))
 
-	r.Static("/static", "web/static")
+	statiques, err := fs.Sub(assets.Static, "static")
+	if err == nil {
+		r.StaticFS("/static", http.FS(statiques))
+	}
 
 	registerHealth(r, d)
 	registerMetrics(r)
