@@ -254,14 +254,14 @@ minimisant les virements ». Plusieurs points ne sont pas précisés.
 
 **Décisions.**
 
-| Question                            | Choix                                                                |
-|-------------------------------------|----------------------------------------------------------------------|
-| Qui peut clôturer ?                 | le créateur du porte-monnaie uniquement                              |
-| Dépense sans payeur                 | révisé : voir ADR-011                                                |            |
-| Centimes qui ne se divisent pas     | un centime de plus aux premiers membres, par ordre d'identifiant     |
-| Calcul des soldes                   | `SUM ... GROUP BY` en SQL brut, partage et virements en Go           |
-| Minimisation des virements          | paires exactes d'abord, puis glouton (au plus n − 1 virements)       |
-| Remboursement                       | simulé : le débiteur clique, on enregistre la date (`settled_at`)    |
+| Question                        | Choix                                                             |
+|---------------------------------|-------------------------------------------------------------------|
+| Qui peut clôturer ?             | le créateur du porte-monnaie uniquement                           |
+| Dépense sans payeur             | révisé : voir ADR-011                                             |            |
+| Centimes qui ne se divisent pas | un centime de plus aux premiers membres, par ordre d'identifiant  |
+| Calcul des soldes               | `SUM ... GROUP BY` en SQL brut, partage et virements en Go        |
+| Minimisation des virements      | paires exactes d'abord, puis glouton (au plus n − 1 virements)    |
+| Remboursement                   | simulé : le débiteur clique, on enregistre la date (`settled_at`) |
 
 **Pourquoi.**
 
@@ -301,11 +301,11 @@ attribués comptés comme payés par l'auteur de la saisie).
 
 **Options.**
 
-| Option                                     | Verdict                                                           |
-|--------------------------------------------|-------------------------------------------------------------------|
-| Imputer à l'auteur de la saisie            | crédite quelqu'un qui n'a rien avancé                             |
-| Garder dans le partage sans créditer       | somme des soldes négative : de l'argent dû que personne ne reçoit |
-| Exclure du payé et du partage              | retenue                                                           |
+| Option                               | Verdict                                                           |
+|--------------------------------------|-------------------------------------------------------------------|
+| Imputer à l'auteur de la saisie      | crédite quelqu'un qui n'a rien avancé                             |
+| Garder dans le partage sans créditer | somme des soldes négative : de l'argent dû que personne ne reçoit |
+| Exclure du payé et du partage        | retenue                                                           |
 
 **Décision.** Une dépense sans payeur ne crédite personne et n'entre pas
 dans le partage. `PaidByAccount` ne compte que les dépenses avec
@@ -340,3 +340,7 @@ projet — c'est précisément ce qu'apporte une chaîne de CI/CD.
 L'image est construite pour `linux/amd64` : un binaire Go est lié à une
 architecture, et développer sur Mac ARM pour déployer sur x86 impose de le
 préciser. Contrainte absente des langages interprétés.
+
+Piège : dans un Dockerfile multi-stage, `--platform` ne vaut que pour l'étape
+où il est écrit. Il faut le porter sur chaque `FROM`, sinon l'image finale
+reprend l'architecture de la machine de build.
