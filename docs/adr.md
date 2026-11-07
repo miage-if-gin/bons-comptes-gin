@@ -235,8 +235,18 @@ Le changement d'hébergeur n'aurait coûté qu'une variable d'environnement : le
 code ne connaît pas son fournisseur de base. C'est le bénéfice concret du
 principe III des Twelve-Factor Apps.
 
-**À faire avant l'atelier.** Activer TLS côté PostgreSQL : le trafic passe
-actuellement en clair sur le réseau universitaire, mots de passe compris.
+**TLS.** PostgreSQL écoute en TLS 1.3 avec un certificat auto-signé monté en
+lecture seule dans le conteneur. Vérifié : `pg_stat_ssl` confirme `ssl = t`
+sur la connexion de l'application.
+
+Le certificat chiffre le transport mais n'atteste pas l'identité du serveur,
+faute d'autorité de certification. Suffisant ici : la VM est sur le réseau
+interne et nous contrôlons les deux extrémités. Un déploiement public
+exigerait un certificat signé.
+
+Piège rencontré : PostgreSQL refuse de démarrer si sa clé privée n'appartient
+pas à son utilisateur. L'UID de `postgres` est 70 sur les images Alpine,
+contre 999 sur les images Debian.
 
 **Détail de mise en œuvre.** Le mot de passe de la base est généré avec
 `openssl rand -hex 24` et non `-base64` : les caractères `/`, `@`, `:` et `?`
@@ -254,14 +264,14 @@ minimisant les virements ». Plusieurs points ne sont pas précisés.
 
 **Décisions.**
 
-| Question                            | Choix                                                                |
-|-------------------------------------|----------------------------------------------------------------------|
-| Qui peut clôturer ?                 | le créateur du porte-monnaie uniquement                              |
-| Dépense sans payeur                 | révisé : voir ADR-011                                                |            |
-| Centimes qui ne se divisent pas     | un centime de plus aux premiers membres, par ordre d'identifiant     |
-| Calcul des soldes                   | `SUM ... GROUP BY` en SQL brut, partage et virements en Go           |
-| Minimisation des virements          | paires exactes d'abord, puis glouton (au plus n − 1 virements)       |
-| Remboursement                       | simulé : le débiteur clique, on enregistre la date (`settled_at`)    |
+| Question                        | Choix                                                             |
+|---------------------------------|-------------------------------------------------------------------|
+| Qui peut clôturer ?             | le créateur du porte-monnaie uniquement                           |
+| Dépense sans payeur             | révisé : voir ADR-011                                             |            |
+| Centimes qui ne se divisent pas | un centime de plus aux premiers membres, par ordre d'identifiant  |
+| Calcul des soldes               | `SUM ... GROUP BY` en SQL brut, partage et virements en Go        |
+| Minimisation des virements      | paires exactes d'abord, puis glouton (au plus n − 1 virements)    |
+| Remboursement                   | simulé : le débiteur clique, on enregistre la date (`settled_at`) |
 
 **Pourquoi.**
 
@@ -299,11 +309,11 @@ attribués comptés comme payés par l'auteur de la saisie).
 
 **Options.**
 
-| Option                                     | Verdict                                                           |
-|--------------------------------------------|-------------------------------------------------------------------|
-| Imputer à l'auteur de la saisie            | crédite quelqu'un qui n'a rien avancé                             |
-| Garder dans le partage sans créditer       | somme des soldes négative : de l'argent dû que personne ne reçoit |
-| Exclure du payé et du partage              | retenue                                                           |
+| Option                               | Verdict                                                           |
+|--------------------------------------|-------------------------------------------------------------------|
+| Imputer à l'auteur de la saisie      | crédite quelqu'un qui n'a rien avancé                             |
+| Garder dans le partage sans créditer | somme des soldes négative : de l'argent dû que personne ne reçoit |
+| Exclure du payé et du partage        | retenue                                                           |
 
 **Décision.** Une dépense sans payeur ne crédite personne et n'entre pas
 dans le partage. `PaidByAccount` ne compte que les dépenses avec
