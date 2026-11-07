@@ -4,10 +4,12 @@ package web
 import (
 	"fmt"
 	"html/template"
+	"io/fs"
 	"net/http"
-	"path/filepath"
+	"path"
 
 	"github.com/gin-gonic/gin"
+	assets "github.com/miage-if-gin/bons-comptes-gin/web"
 )
 
 // Renderer détient une template compilée par page.
@@ -19,22 +21,22 @@ type Renderer struct {
 	pages map[string]*template.Template
 }
 
-// NewRenderer compile chaque page du dossier avec le layout de base.
-func NewRenderer(dir string) (*Renderer, error) {
-	layout := filepath.Join(dir, "layouts", "base.html")
+// NewRenderer compile chaque page embarquée avec le layout de base.
+func NewRenderer() (*Renderer, error) {
+	const layout = "templates/layouts/base.html"
 
-	paths, err := filepath.Glob(filepath.Join(dir, "pages", "*.html"))
+	paths, err := fs.Glob(assets.Templates, "templates/pages/*.html")
 	if err != nil {
 		return nil, fmt.Errorf("lecture des pages : %w", err)
 	}
 	if len(paths) == 0 {
-		return nil, fmt.Errorf("aucune page trouvée dans %s/pages", dir)
+		return nil, fmt.Errorf("aucune page embarquée")
 	}
 
 	pages := make(map[string]*template.Template, len(paths))
-	for _, path := range paths {
-		name := filepath.Base(path)
-		tmpl, err := template.ParseFiles(layout, path)
+	for _, p := range paths {
+		name := path.Base(p)
+		tmpl, err := template.ParseFS(assets.Templates, layout, p)
 		if err != nil {
 			return nil, fmt.Errorf("compilation de %s : %w", name, err)
 		}

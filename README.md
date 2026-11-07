@@ -154,6 +154,45 @@ Générer le secret avec PowerShell plutôt qu'`openssl` :
 
     -join ((1..32) | ForEach-Object { '{0:x2}' -f (Get-Random -Max 256) })
 
+## Déploiement
+
+L'application tourne sur la VM OpenStack du FIL, à côté de PostgreSQL
+(voir [ADR-009](docs/adr.md)). Accessible depuis le campus ou via le VPN du FIL.
+
+### Construire et transférer l'image
+
+    docker build -t bons-comptes .
+    docker save bons-comptes:latest | gzip > /tmp/bons-comptes.tar.gz
+    scp -i ~/.ssh/bons-comptes.pem /tmp/bons-comptes.tar.gz ubuntu@<vm>:~/
+
+L'image est construite pour `linux/amd64` : la VM est en x86 et le binaire Go
+est compilé pour une architecture précise.
+
+Attention : Docker Desktop ne traverse pas le VPN du FIL. Construire avec le
+VPN déconnecté, puis le reconnecter pour le transfert.
+
+### Déployer
+
+    ssh -i ~/.ssh/bons-comptes.pem ubuntu@<vm>
+    docker load < ~/bons-comptes.tar.gz
+    cd ~/bons-comptes && docker compose up -d
+    docker compose logs app
+
+Le `docker-compose.yml` de la VM déclare PostgreSQL et l'application sur le
+même réseau : l'application joint la base par le nom de service `postgres`.
+Les secrets y sont renseignés en clair, le fichier ne quitte pas la VM.
+
+| Variable         | Valeur en production                                       |
+|------------------|------------------------------------------------------------|
+| `APP_ENV`        | `production` — Gin en mode release, logs SQL réduits       |
+| `PORT`           | `8080`                                                     |
+| `DATABASE_URL`   | `postgres://bonscomptes:…@postgres:5432/bonscomptes`       |
+| `SESSION_SECRET` | généré une fois, stable — le changer invalide les sessions |
+
+### Vérifier
+
+    curl http://<vm>:8080/readyz
+
 ## Structure du projet
 
     cmd/server/        point d'entrée : configuration, base, serveur, arrêt propre
