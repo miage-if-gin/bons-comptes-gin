@@ -39,6 +39,10 @@ Exception quand un package regroupe plusieurs rôles : dans `internal/http`,
 les fichiers sont préfixés par leur rôle (`handlers_auth.go`, `middleware.go`,
 `router.go`).
 
+- **IntelliJ IDEA / GoLand** — plugin **Go**, puis Settings → Tools →
+  Actions on Save → cocher *Reformat code*
+- **VS Code** — extension **Go** officielle, actif par défaut
+
 ## Architecture
 
 Quatre couches, chacune ne connaissant que la suivante :

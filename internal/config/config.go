@@ -11,9 +11,12 @@ import (
 // Config regroupe tous les réglages de l'application.
 // Aucune valeur n'est codée en dur ailleurs dans le code.
 type Config struct {
-	AppEnv        string `env:"APP_ENV" envDefault:"development"`
-	Port          string `env:"PORT" envDefault:"8080"`
-	DatabaseURL   string `env:"DATABASE_URL,required"`
+	AppEnv      string `env:"APP_ENV" envDefault:"development"`
+	Port        string `env:"PORT" envDefault:"8080"`
+	DatabaseURL string `env:"DATABASE_URL,required"`
+	// SessionSecret n'est pas encore utilisé : les sessions reposent sur un
+	// token aléatoire stocké en base (ADR-003), pas sur un cookie signé.
+	// Conservé pour un éventuel passage aux cookies signés.
 	SessionSecret string `env:"SESSION_SECRET,required"`
 }
 

@@ -1,87 +1,84 @@
-# Les bons comptes — Gin (Go)
+# Les bons comptes
 
-Application web de gestion de dépenses partagées, développée dans le cadre du module
-**Infrastructures & Frameworks** (M2 MIAGE IFI, Université de Lille).
+Application de gestion de dépenses partagées : on crée un porte-monnaie, on y
+invite des comptes, chacun déclare ses dépenses, et à la clôture l'application
+calcule qui doit combien à qui.
 
-Technologie attribuée : **Gin**, framework web minimaliste en **Go**.
+Projet du module **Infrastructures & Frameworks** (M2 MIAGE IFI, Université de
+Lille). Technologie attribuée : **Gin**, framework web minimaliste en **Go**.
 
-## Équipe
+**Équipe** — Sofia Demchuk, Yuliia Los, Baptiste Delisle, Thomas Devinck
+**Encadrants** — Romain Rouvoy, Gaëtan Hasbroucq
 
-- Sofia Demchuk
-- Yuliia Los
-- Baptiste Delisle
-- Thomas DEVINCK
+---
 
-Encadrants : Romain Rouvoy, Gaëtan Hasbroucq
+## Démarrer
 
-## Prérequis
+| Prérequis                                               | Version | Vérifier                 |
+|---------------------------------------------------------|---------|--------------------------|
+| [Go](https://go.dev/dl)                                 | ≥ 1.27  | `go version`             |
+| [Docker + Compose](https://docs.docker.com/get-started) | —       | `docker compose version` |
 
-| Outil                   | Version | Vérifier                 |
-|-------------------------|---------|--------------------------|
-| Go                      | ≥ 1.22  | `go version`             |
-| Git                     | —       | `git --version`          |
-| Docker + Docker Compose | —       | `docker compose version` |
+```bash
+git clone git@github.com:miage-if-gin/bons-comptes-gin.git
+cd bons-comptes-gin
+go mod download
 
-### Installer Go
+cp .env.example .env
+openssl rand -hex 32          # à reporter dans SESSION_SECRET
 
-**macOS**
+make up                       # PostgreSQL + Adminer
+make run                      # http://localhost:8080
+```
 
-    brew install go
+Les migrations s'appliquent au démarrage du serveur : la base est prête sans
+commande supplémentaire.
 
-ou l'installeur `.pkg` depuis https://go.dev/dl (choisir arm64 pour les Mac Apple Silicon).
+Vérifier : `curl localhost:8080/readyz` → `{"db":"ok","status":"ok"}`
 
-**Linux** — télécharger l'archive sur https://go.dev/dl puis la décompresser dans
-`/usr/local` et ajouter `/usr/local/go/bin` au `PATH`.
+| Service    | URL                   | Identifiants                           |
+|------------|-----------------------|----------------------------------------|
+| PostgreSQL | `localhost:5432`      | `bonscomptes` / `bonscomptes`          |
+| Adminer    | http://localhost:8081 | serveur `postgres`, base `bonscomptes` |
 
-**Windows** — installeur `.msi` depuis https://go.dev/dl, puis rouvrir le terminal.
+### Sur Windows
 
-### Installer Docker
+`make` et `openssl` ne sont pas disponibles nativement. Le plus simple est de
+travailler dans **WSL 2**, où toutes les commandes de ce README fonctionnent
+telles quelles.
 
-**macOS**
+Sans WSL, remplacer les cibles `make` par leurs commandes, et exporter les
+variables du `.env` manuellement — c'est le `Makefile` qui les charge :
 
-    brew install --cask docker
+| Cible       | Commande                     |
+|-------------|------------------------------|
+| `make up`   | `docker compose up -d`       |
+| `make run`  | `go run ./cmd/server`        |
+| `make seed` | `go run ./cmd/seed`          |
+| `make test` | `go test ./... -race -cover` |
+| `make down` | `docker compose down`        |
 
-ou Docker Desktop depuis https://www.docker.com/products/docker-desktop.
-Lancer l'application : le démon ne tourne que si Docker Desktop est ouvert.
+Générer le secret de session avec PowerShell :
 
-**Linux** — Docker Engine et le plugin Compose en suivant
-https://docs.docker.com/engine/install. Ajouter son utilisateur au groupe
-`docker` pour éviter `sudo`.
+```powershell
+-join ((1..32) | ForEach-Object { '{0:x2}' -f (Get-Random -Max 256) })
+```
 
-**Windows** — Docker Desktop avec le backend WSL 2.
+### Jeu de données
 
-### Configurer l'éditeur
+Partir d'une base réaliste plutôt que vide :
 
-Activer le formatage automatique à la sauvegarde : Go impose `gofmt`, et la CI
-rejette tout fichier non formaté.
+```bash
+make seed                     # 40 comptes, 25 porte-monnaies, 5 000 dépenses
+```
 
-- **IntelliJ IDEA / GoLand** — installer le plugin **Go**, puis
-  Settings → Tools → Actions on Save → cocher *Reformat code*
-- **VS Code** — extension **Go** officielle, le formatage est actif par défaut
+Tous les comptes générés ont le mot de passe `demo1234`. Options disponibles
+via `go run ./cmd/seed -h`.
 
-Vérifier à tout moment avec :
+### Configuration
 
-    gofmt -l .
-
-La commande ne doit rien afficher.
-
-## Démarrage
-
-### 1. Cloner et installer les dépendances
-
-    git clone git@github.com:miage-if-gin/bons-comptes-gin.git
-    cd bons-comptes-gin
-    go mod download
-
-### 2. Configurer l'environnement
-
-    cp .env.example .env
-
-Puis générer un secret de session avec `openssl rand -hex 32` et le reporter
-dans `.env`.
-
-> `.env` est ignoré par Git. Chacun génère son propre `SESSION_SECRET` en
-> local ; aucun secret ne doit être commité ni partagé dans le dépôt.
+Toute la configuration passe par l'environnement (Twelve-Factor, principe III).
+Aucune valeur n'est codée en dur ailleurs dans le code.
 
 | Variable         | Rôle                                   | Défaut        |
 |------------------|----------------------------------------|---------------|
@@ -90,180 +87,112 @@ dans `.env`.
 | `DATABASE_URL`   | chaîne de connexion PostgreSQL         | base locale   |
 | `SESSION_SECRET` | clé de signature des sessions (64 hex) | —             |
 
-### 3. Lancer la base de données
+`.env` est ignoré par Git : aucun secret n'est versionné, chacun génère le sien.
 
-Docker Desktop doit être démarré.
+### Commandes
 
-    make up              # démarre PostgreSQL et Adminer
-    docker compose ps    # postgres doit être "healthy"
-
-| Service    | URL                   | Identifiants                           |
-|------------|-----------------------|----------------------------------------|
-| PostgreSQL | `localhost:5432`      | `bonscomptes` / `bonscomptes`          |
-| Adminer    | http://localhost:8081 | serveur `postgres`, base `bonscomptes` |
+```
+make help     liste toutes les commandes
+make up       démarre PostgreSQL et Adminer
+make run      lance le serveur
+make seed     peuple la base de démonstration
+make test     tests avec détection de data races
+make fmt      formate le code
+make vet      analyse statique
+make psql     shell SQL sur la base locale
+make down     arrête les conteneurs
+make reset    détruit la base et ses données
+```
 
 ### Base partagée
 
-Pour travailler sur les données communes du groupe, remplacer `DATABASE_URL`
-par celle de l'instance hébergée sur l'OpenStack du FIL. L'URL est transmise en
-privé, jamais versionnée.
+L'équipe travaille sur une instance PostgreSQL commune, hébergée sur une
+machine virtuelle de l'OpenStack du FIL ([ADR-009](docs/adr.md)). Remplacer
+`DATABASE_URL` par l'URL du groupe, transmise en privé.
 
-Accessible depuis le campus uniquement, ou via le VPN du FIL depuis
-l'extérieur. Les migrations s'appliquent automatiquement au démarrage : la
-première instance lancée crée le schéma, les suivantes constatent qu'il est à
-jour.
+Accessible depuis le campus, ou via le VPN du FIL. La liaison est chiffrée
+(TLS 1.3, `sslmode=require`). Un verrou consultatif PostgreSQL empêche deux
+instances de rejouer la même migration simultanément.
 
-### 4. Lancer le serveur
+---
 
-Les migrations s'appliquent automatiquement au démarrage.
+## Architecture
 
-    make run
-    curl localhost:8080/readyz    # {"db":"ok","status":"ok"}
+```
+cmd/server/     point d'entrée : configuration, base, serveur, arrêt propre
+cmd/seed/       génération du jeu de données de démonstration
+internal/
+  config/       configuration lue depuis l'environnement
+  db/           connexion PostgreSQL et migrations
+  domain/       structures métier, sans dépendance technique
+  repository/   accès aux données
+  service/      règles métier, testables sans serveur ni base
+  http/         routeur, handlers, middlewares
+  web/          chargement et rendu des templates
+migrations/     schéma SQL versionné, embarqué dans le binaire
+web/            templates HTML et fichiers statiques
+docs/adr.md     décisions d'architecture
+```
 
-L'application est disponible sur http://localhost:8080.
+Gin n'impose ni ORM, ni migrations, ni authentification, ni structure de
+projet. Chacun de ces choix est donc le nôtre :
 
-### Jeu de données de démonstration
+| Besoin        | Choix                  | Pourquoi                                                   |
+|---------------|------------------------|------------------------------------------------------------|
+| Accès données | GORM                   | répandu, aucune installation pour les participants du TP   |
+| Migrations    | golang-migrate         | SQL versionné, embarqué via `go:embed`                     |
+| Vues          | `html/template` + htmx | pas de build frontend, échappement XSS natif               |
+| CSS           | Tailwind (CDN)         | aucune installation ; un build serait requis en production |
+| Sessions      | table `sessions`       | révocation réelle à la déconnexion, contrairement au JWT   |
+| Montants      | `BIGINT` en centimes   | jamais de flottant pour représenter de l'argent            |
 
-Pour travailler sur un volume réaliste plutôt qu'une base vide :
+Le raisonnement complet, les options écartées et leurs conséquences sont dans
+**[docs/adr.md](docs/adr.md)** — douze décisions documentées.
 
-    make seed
-
-Crée 40 comptes, 25 porte-monnaies et 5000 dépenses en 200 ms environ. Tous
-les comptes générés ont l'adresse `prenomN-timestamp@demo.local` et le mot de
-passe `demo1234`.
-
-    go run ./cmd/seed -comptes 100 -portemonnaies 50 -depenses 20000
-
-Les données reflètent les cas réels : les trois statuts d'appartenance sont
-représentés, et une dépense sur six n'a pas de payeur. La graine aléatoire
-est fixe, deux exécutions produisent donc le même jeu.
-
-Le seed écrit directement en base, sans passer par les services : à réserver
-au développement et aux démonstrations.
-
-### Commandes utiles
-
-    make help        # liste toutes les commandes
-    make psql        # shell SQL sur la base locale
-    make fmt         # formate le code
-    make vet         # analyse statique
-    make test        # tests avec détection de data races
-    make down        # arrête les conteneurs
-    make reset       # détruit la base et ses données
-    make seed        # peuple la base de données de démonstration
-
-### Notes Windows
-
-`make` et `openssl` ne sont pas disponibles nativement. Le plus simple est de
-travailler dans **WSL 2** (Ubuntu), où toutes les commandes ci-dessus
-fonctionnent telles quelles.
-
-Sans WSL, remplacer les cibles `make` par leurs commandes :
-
-| Cible       | Commande                     |
-|-------------|------------------------------|
-| `make up`   | `docker compose up -d`       |
-| `make down` | `docker compose down`        |
-| `make run`  | `go run ./cmd/server`        |
-| `make test` | `go test ./... -race -cover` |
-
-Attention : le `Makefile` charge le `.env` automatiquement. Sans `make`, il faut
-exporter les variables manuellement avant de lancer le serveur.
-
-Générer le secret avec PowerShell plutôt qu'`openssl` :
-
-    -join ((1..32) | ForEach-Object { '{0:x2}' -f (Get-Random -Max 256) })
+---
 
 ## Déploiement
 
-L'application tourne sur la VM OpenStack du FIL, à côté de PostgreSQL
-(voir [ADR-009](docs/adr.md)). Accessible depuis le campus ou via le VPN du FIL.
+L'application tourne sur la VM du FIL, dans un conteneur, à côté de sa base.
+L'image fait **13 Mo** : binaire statique, templates et schéma SQL compris.
 
-### Construire et transférer l'image
+```bash
+docker build -t bons-comptes .
+docker save bons-comptes:latest | gzip > /tmp/bons-comptes.tar.gz
+scp -i ~/.ssh/bons-comptes.pem /tmp/bons-comptes.tar.gz ubuntu@<vm>:~/
 
-    docker build -t bons-comptes .
-    docker save bons-comptes:latest | gzip > /tmp/bons-comptes.tar.gz
-    scp -i ~/.ssh/bons-comptes.pem /tmp/bons-comptes.tar.gz ubuntu@<vm>:~/
+ssh -i ~/.ssh/bons-comptes.pem ubuntu@<vm>
+docker load < ~/bons-comptes.tar.gz
+cd ~/bons-comptes && docker compose up -d
+```
 
-L'image est construite pour `linux/amd64` : la VM est en x86 et le binaire Go
-est compilé pour une architecture précise.
+L'image est construite pour `linux/amd64` : un binaire Go est lié à une
+architecture, et la VM est en x86. Docker Desktop ne traversant pas le VPN du
+FIL, construire VPN déconnecté puis le reconnecter pour le transfert.
 
-Attention : Docker Desktop ne traverse pas le VPN du FIL. Construire avec le
-VPN déconnecté, puis le reconnecter pour le transfert.
+En production, `APP_ENV=production` fait passer Gin en mode release et réduit
+la verbosité des logs SQL. Le `SESSION_SECRET` doit y rester stable : le
+changer invalide toutes les sessions.
 
-### Déployer
+### Supervision
 
-    ssh -i ~/.ssh/bons-comptes.pem ubuntu@<vm>
-    docker load < ~/bons-comptes.tar.gz
-    cd ~/bons-comptes && docker compose up -d
-    docker compose logs app
+| Endpoint   | Question à laquelle il répond    | Réaction attendue en cas d'échec                 |
+|------------|----------------------------------|--------------------------------------------------|
+| `/healthz` | le processus est-il vivant ?     | redémarrer l'instance                            |
+| `/readyz`  | la base répond-elle ?            | retirer l'instance du trafic, sans la redémarrer |
+| `/metrics` | comment se porte l'application ? | —                                                |
 
-Le `docker-compose.yml` de la VM déclare PostgreSQL et l'application sur le
-même réseau : l'application joint la base par le nom de service `postgres`.
-Les secrets y sont renseignés en clair, le fichier ne quitte pas la VM.
+`/metrics` expose au format Prometheus le nombre de requêtes par route,
+méthode et code de retour, ainsi qu'un histogramme des temps de réponse. Les
+routes sont étiquetées par leur motif (`/wallets/:id`) et non par l'URL
+réelle : sans cela, chaque porte-monnaie créerait sa propre série.
 
-| Variable         | Valeur en production                                       |
-|------------------|------------------------------------------------------------|
-| `APP_ENV`        | `production` — Gin en mode release, logs SQL réduits       |
-| `PORT`           | `8080`                                                     |
-| `DATABASE_URL`   | `postgres://bonscomptes:…@postgres:5432/bonscomptes`       |
-| `SESSION_SECRET` | généré une fois, stable — le changer invalide les sessions |
-
-### Vérifier
-
-    curl http://<vm>:8080/readyz
-
-## Structure du projet
-
-    cmd/server/        point d'entrée : configuration, base, serveur, arrêt propre
-    internal/
-      config/          chargement de la configuration depuis l'environnement
-      db/              connexion PostgreSQL et application des migrations
-      domain/          structures métier
-      repository/      accès aux données
-      service/         règles métier
-      http/            routeur et handlers
-      web/             chargement et rendu des templates
-    migrations/        schéma SQL versionné (embarqué dans le binaire)
-    docs/              décisions d'architecture et notes
-    web/
-      templates/       layouts et pages HTML
-      static/          fichiers statiques
-
-## Choix techniques
-
-| Besoin         | Choix                     | Pourquoi                                                       |
-|----------------|---------------------------|----------------------------------------------------------------|
-| Framework HTTP | Gin                       | imposé par le sujet                                            |
-| Accès données  | GORM                      | ORM le plus répandu en Go, rapide à prendre en main            |
-| Migrations     | golang-migrate            | fichiers SQL versionnés, embarqués via `go:embed`              |
-| Vues           | `html/template` + htmx    | pas de build frontend, rendu côté serveur                      |
-| CSS            | Tailwind (CDN)            | aucune installation ; un build serait nécessaire en production |
-| Configuration  | variables d'environnement | Twelve-Factor, principe III                                    |
-
-Les montants sont stockés en **centimes** (`BIGINT`) : jamais de flottant pour
-représenter de l'argent.
-
-Le détail de chaque décision, avec les options écartées et leurs conséquences,
-est dans [docs/adr.md](docs/adr.md).
-
-## Supervision
-
-| Endpoint   | Rôle                                           | Qui l'interroge                                                     |
-|------------|------------------------------------------------|---------------------------------------------------------------------|
-| `/healthz` | sonde de vivacité : le processus répond-il ?   | l'orchestrateur, qui redémarre l'instance en cas d'échec            |
-| `/readyz`  | sonde de disponibilité : la base répond-elle ? | l'orchestrateur, qui retire l'instance du trafic sans la redémarrer |
-| `/metrics` | métriques au format Prometheus                 | un serveur Prometheus, périodiquement                               |
-
-Les trois répondent à des questions différentes : « suis-je vivant », « puis-je
-travailler », « comment je me porte ».
-
-Métriques exposées : nombre de requêtes par route, méthode et code de retour ;
-histogramme des temps de réponse.
-
-Les routes sont étiquetées par leur motif (`/wallets/:id`) et non par l'URL
-réelle : sans cela, chaque porte-monnaie créerait sa propre série de métriques.
+---
 
 ## Contribuer
 
-Voir [CONTRIBUTING.md](CONTRIBUTING.md).
+Conventions de branches, de commits et d'architecture :
+**[CONTRIBUTING.md](CONTRIBUTING.md)**.
+
+Chaque modification passe par une pull request relue par un autre membre. La
+CI vérifie le formatage, l'analyse statique, la compilation et les tests.
