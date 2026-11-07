@@ -229,13 +229,20 @@ est dans [docs/adr.md](docs/adr.md).
 
 ## Supervision
 
-| Endpoint   | Rôle                                           |
-|------------|------------------------------------------------|
-| `/healthz` | sonde de vivacité : le processus répond-il ?   |
-| `/readyz`  | sonde de disponibilité : la base répond-elle ? |
+| Endpoint   | Rôle                                           | Qui l'interroge                                                     |
+|------------|------------------------------------------------|---------------------------------------------------------------------|
+| `/healthz` | sonde de vivacité : le processus répond-il ?   | l'orchestrateur, qui redémarre l'instance en cas d'échec            |
+| `/readyz`  | sonde de disponibilité : la base répond-elle ? | l'orchestrateur, qui retire l'instance du trafic sans la redémarrer |
+| `/metrics` | métriques au format Prometheus                 | un serveur Prometheus, périodiquement                               |
 
-Un orchestrateur redémarre l'instance sur l'échec de la première, la retire du
-load balancer sur l'échec de la seconde.
+Les trois répondent à des questions différentes : « suis-je vivant », « puis-je
+travailler », « comment je me porte ».
+
+Métriques exposées : nombre de requêtes par route, méthode et code de retour ;
+histogramme des temps de réponse.
+
+Les routes sont étiquetées par leur motif (`/wallets/:id`) et non par l'URL
+réelle : sans cela, chaque porte-monnaie créerait sa propre série de métriques.
 
 ## Contribuer
 
